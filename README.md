@@ -147,5 +147,5 @@ $ ./satprep_diff.py -x errata-snapshot-report-localhost-20140728-23*
 
 Create the same reports with different page orientation, an custom logo (*e.g. company logo*) and a custom footer:
 ```
-$ ./satprep_diff.py -x errata-snapshot-report-localhost-20140728-23* -p potrait -i /opt/tools/myCompany.jpg -f “myCompany maintenance report“
+$ ./satprep_diff.py -x errata-snapshot-report-localhost-20140728-23* -p potrait -i /opt/tools/myCompany.jpg -f "myCompany maintenance report"
 ```
