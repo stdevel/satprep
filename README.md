@@ -13,7 +13,7 @@ What does it look like?
 =======================
 
 A maintenance report looks like this:
-![Example satprep maintenance report][default_logo.jpg]
+![Example satprep maintenance report](https://raw.githubusercontent.com/stdevel/satprep/master/satprep_example_report.png "Example satprep maintenance report")
 
 
 
@@ -21,18 +21,21 @@ How does it work?
 =================
 
 The toolkit consists of three scripts:
-1. **satprep_install_custominfo.py** - installs necessary custom information (*see above*) for your hosts managed with Spacewalk, Red Hat Satellite or SUSE Manager. You will need to execute this script once to make sure that all information can be assigned
-2. **satprep_snapshot.py** - creates an inventory of the current available patches and errata to your system landscape. It gathers the following information:
-⋅⋅* system hostname and IP
-⋅⋅* system virtualization guest status
-⋅⋅* system owner / cluster member / monitoring / backup / anti-virus status (*optional*)
-⋅⋅* errata information including name, date, description, advisory type (security/bugfix/enhancement update) and even whether a reboot is required
-⋅⋅* also regular patch information (optional)
-3. **satprep_diff.py**
-⋅⋅* creates the delta
-⋅⋅* required to create the maintenance reports
+
+
+1. `satprep_install_custominfo.py` - installs necessary custom information (*see above*) for your hosts managed with Spacewalk, Red Hat Satellite or SUSE Manager. You will need to execute this script once to make sure that all information can be assigned
+2. `satprep_snapshot.py` - creates an inventory of the current available patches and errata to your system landscape. It gathers the following information:
+  * system hostname and IP
+  * system virtualization guest status
+  * system owner / cluster member / monitoring / backup / anti-virus status (*optional*)
+  * errata information including name, date, description, advisory type (*security/bugfix/enhancement update*) and even whether a reboot is required
+  * also regular patch information (*optional*)
+3. `satprep_diff.py` - creates the delta, required to create the maintenance reports
+ 
+
 
 Make sure to follow this procedure to document your maintenance tasks:
+
 1. do a complete patch/errata inventory of your landscape: `./satprep_snapshot.py`
 2. notice that a CSV report was created: `errata-snapshot-report-$RHNhostname-YYYYMMDD-HHMM.csv`
 3. complete your system maintenance tasks (*create virtual machine snapshots, patch and reboot systems, etc.*)
