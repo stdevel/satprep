@@ -1,0 +1,101 @@
+% Document class and meta information
+\documentclass[11pt]{report}
+\title{System maintenance report for %%titleHostname}
+\author{satprep toolkit}
+
+% Packages
+\usepackage[a4paper,%%orientation margin=1.0in]{geometry}
+\usepackage{scrpage2}\pagestyle{scrheadings}
+\usepackage{wasysym} % symbols
+\usepackage{tabularx}
+\usepackage{colortbl}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{graphicx} 
+
+\setlength\extrarowheight{2pt}
+
+% Header, footer and colors
+\ihead{System maintenance report for \textbf{%%titleHostname}}
+\ohead{\includegraphics[width=3.5cm]{%%logo}}
+\ifoot{%%footer}
+\ofoot{\thepage}
+\definecolor{Gray}{gray}{0.9}
+
+% Create document
+\begin{document}
+
+
+
+% Meta data table
+\section*{}
+\begin{tabularx}{\textwidth}{|X|X|X|X|X|X|}
+\hline
+\multicolumn{6}{|c|}{\cellcolor{Gray}\textbf{System maintenance report}} \\
+\hline
+\textbf{IP:} & %%ip & \textbf{Date:} & %%date & \textbf{Time from:} &  \\
+\hline
+\textbf{Responsible:} & %%owner & \textbf{Sign:} & & \textbf{Time to:} &  \\
+\hline
+\end{tabularx}
+
+
+
+% Meta information and planned tasks table
+\section*{}
+\begin{tabularx}{\textwidth}{ | X | l | X | l | X | l | X | l | }
+\hline
+\multicolumn{8}{|c|}{\cellcolor{Gray}\textbf{Meta information and planned tasks}} \\
+\hline
+%Standalone system & $\Box$ & Cluster system & $\Box$ & Update operating system & $\CheckedBox$ & Update application & $\Box$ \\
+Standalone system & %%systemStandalone & Cluster system & %%systemCluster & Update operating system & $\CheckedBox$ & Update application & $\Box$ \\
+\hline
+Hardware change & $\Box$ & Other tasks (please specify) & \multicolumn{5}{l|}{} \\
+\hline
+\end{tabularx}
+
+
+
+% Task checklist
+\section*{}
+\begin{tabularx}{\textwidth}{ | X | l | l | X | }
+\hline
+\multicolumn{4}{|c|}{\cellcolor{Gray}\textbf{Procedure checklist}} \\
+\hline
+\textbf{Task} & \multicolumn{2}{c|}{\textbf{Success}} & \textbf{Error description/notes} \\
+& \textbf{Yes} & \textbf{No} & \\
+\cline{2-2}
+\cline{2-4}
+\hline
+Hardware check & $\Box$ & %%hwCheckNo & %%hwCheckNotes \\
+Snapshot of virtual machine created & $\Box$ & %%vmSnapNo & %%vmSnapNotes \\
+Monitoring disabled & $\Box$ & $\Box$ & \\
+Tasks (see above) realised & $\Box$ & $\Box$ & \\
+System rebooted & $\Box$ & %%rebootNo & %%rebootNotes \\
+Application up and running & $\Box$ & $\Box$ & \\
+Backup services up and running & $\Box$ & $\Box$ & \\
+Anti-virus services up and running & $\Box$ & $\Box$ & \\
+Cluster test & $\Box$ & %%systemStandalone & %%hintsClusterTest \\
+Monitoring enabled & $\Box$ & $\Box$ & \\
+\hline
+\end{tabularx}
+
+
+
+% Errata table
+%%errata
+
+
+
+% Additional notes
+\section*{}
+\begin{tabularx}{\textwidth}{ | X | }
+\hline
+\cellcolor{Gray}
+\textbf{Additional notes (events, tasks, issues)} \\
+\hline
+\\ \\ \\ \\ \\
+\hline
+\end{tabularx}
+
+\end{document}
