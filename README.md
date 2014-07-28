@@ -52,7 +52,7 @@ For gathering optional semantic information (*e.g. backup and monitoring*) the s
 * **SYSTEM_BACKUP** - defines whether the host is protected using backups
 * **SYSTEM_BACKUP_NOTES** - notes explaining why backup is not configured (*e.g. development system*)
 * **SYSTEM_ANTIVIR** - defines whether the host is protected against viruses
-* **SYSTEM_ANTIVIR_NOTES** - explanation why anti-virus is not configured (*.e.g. no concept*)
+* **SYSTEM_ANTIVIR_NOTES** - explanation why anti-virus is not configured (*e.g. no concept*)
 
 
 
