@@ -50,34 +50,7 @@ def main(options):
 	key = client.auth.login(username, password)
 
 	check_if_api_is_supported(client)
-
-	# create keys
-	# get also pre-defined keys
-	definedKeys = client.system.custominfo.listAllKeys(key)
-	defined_keys_as_str = str(definedKeys)
-
-	LOGGER.debug("DEBUG: pre-defined custom information keys: {0}".format(definedKeys))
-	for newKey in customKeys:
-		resultcode = 0
-
-		LOGGER.debug("DEBUG: about to add system information key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
-		if newKey in defined_keys_as_str:
-			if options.force:
-				LOGGER.info("INFO: overwriting pre-existing key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
-
-				resultcode = client.system.custominfo.updateKey(
-					key, newKey, customKeys.get(newKey))
-			else:
-				LOGGER.warning("INFO: key '" + newKey + "' already exists. Use -f / --force to overwrite!")
-		else:
-			resultcode = client.system.custominfo.createKey(
-				key, newKey, customKeys.get(newKey))
-
-		if resultcode == 1:
-			LOGGER.info("INFO: successfully created/updated information key '{0}'".format(newKey))
-		else:
-			if newKey not in customKeys:
-				LOGGER.warning("INFO: unable to create key '{0}': check your account permissions!".format(newKey))
+	create_custom_keys(client, key)
 
 
 def get_credentials(input_file=None):
@@ -118,6 +91,33 @@ def check_if_api_is_supported(client):
 	else:
 		LOGGER.info("INFO: supported API version (" + api_level + ") found.")
 
+
+def create_custom_keys(client, sessionKey):
+	definedKeys = client.system.custominfo.listAllKeys(sessionKey)
+	defined_keys_as_str = str(definedKeys)
+
+	LOGGER.debug("DEBUG: pre-defined custom information keys: {0}".format(definedKeys))
+	for newKey in customKeys:
+		resultcode = 0
+
+		LOGGER.debug("DEBUG: about to add system information key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
+		if newKey in defined_keys_as_str:
+			if options.force:
+				LOGGER.info("INFO: overwriting pre-existing key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
+
+				resultcode = client.system.custominfo.updateKey(
+					key, newKey, customKeys.get(newKey))
+			else:
+				LOGGER.warning("INFO: key '" + newKey + "' already exists. Use -f / --force to overwrite!")
+		else:
+			resultcode = client.system.custominfo.createKey(
+				key, newKey, customKeys.get(newKey))
+
+		if resultcode == 1:
+			LOGGER.info("INFO: successfully created/updated information key '{0}'".format(newKey))
+		else:
+			if newKey not in customKeys:
+				LOGGER.warning("INFO: unable to create key '{0}': check your account permissions!".format(newKey))
 
 
 def parse_options(args=None):
