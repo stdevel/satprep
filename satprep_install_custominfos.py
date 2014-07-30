@@ -92,8 +92,8 @@ def check_if_api_is_supported(client):
 		LOGGER.info("INFO: supported API version (" + api_level + ") found.")
 
 
-def create_custom_keys(client, sessionKey):
-	definedKeys = client.system.custominfo.listAllKeys(sessionKey)
+def create_custom_keys(client, session_key):
+	definedKeys = client.system.custominfo.listAllKeys(session_key)
 	defined_keys_as_str = str(definedKeys)
 
 	LOGGER.debug("DEBUG: pre-defined custom information keys: {0}".format(definedKeys))
@@ -106,12 +106,12 @@ def create_custom_keys(client, sessionKey):
 				LOGGER.info("INFO: overwriting pre-existing key '" + new_key + "' with description '" + CUSTOM_KEYS.get(new_key) + "'...")
 
 				resultcode = client.system.custominfo.updateKey(
-					key, new_key, CUSTOM_KEYS.get(new_key))
+					session_key, new_key, CUSTOM_KEYS.get(new_key))
 			else:
 				LOGGER.warning("INFO: key '" + new_key + "' already exists. Use -f / --force to overwrite!")
 		else:
 			resultcode = client.system.custominfo.createKey(
-				key, new_key, CUSTOM_KEYS.get(new_key))
+				session_key, new_key, CUSTOM_KEYS.get(new_key))
 
 		if resultcode == 1:
 			LOGGER.info("INFO: successfully created/updated information key '{0}'".format(new_key))
