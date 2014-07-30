@@ -45,7 +45,7 @@ def main(options):
 	if options.dryrun:
 		print "I'd like to create the following system information keys:\n"
 		pprint.pprint(customKeys)
-		exit(0)
+		sys.exit(0)
 
 	# setup client and key depending on mode
 	client = xmlrpclib.Server(SATELLITE_URL, verbose=options.debug)
@@ -65,10 +65,10 @@ def main(options):
 			else:
 				if options.verbose:
 					print "ERROR: file permission (" + filemode + ") not matching 0600!"
-				exit(1)
+				sys.exit(1)
 		except OSError:
 			print "ERROR: file non-existent or permissions not 0600!"
-			exit(1)
+			sys.exit(1)
 	elif "SATELLITE_LOGIN" in os.environ and "SATELLITE_PASSWORD" in os.environ:
 		# shell variables
 		if options.debug:
@@ -87,7 +87,7 @@ def main(options):
 	api_level = client.api.getVersion()
 	if not api_level in supported_API_levels:
 		print "ERROR: your API version (" + api_level + ") does not support the required calls. You'll need API version 1.8 (11.1) or higher!"
-		exit(1)
+		sys.exit(1)
 	else:
 		if options.debug:
 			print "INFO: supported API version (" + api_level + ") found."
