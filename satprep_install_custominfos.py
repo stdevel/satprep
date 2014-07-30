@@ -63,22 +63,21 @@ def main(options):
 		LOGGER.debug("DEBUG: about to add system information key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
 		if newKey in defined_keys_as_str:
 			if options.force:
-				if options.verbose:
-					LOGGER.info("INFO: overwriting pre-existing key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
+				LOGGER.info("INFO: overwriting pre-existing key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
+
 				resultcode = client.system.custominfo.updateKey(
 					key, newKey, customKeys.get(newKey))
 			else:
-				LOGGER.info("INFO: key '" + newKey + "' already exists. Use -f / --force to overwrite!")
+				LOGGER.warning("INFO: key '" + newKey + "' already exists. Use -f / --force to overwrite!")
 		else:
 			resultcode = client.system.custominfo.createKey(
 				key, newKey, customKeys.get(newKey))
 
 		if resultcode == 1:
-			if options.verbose:
-				LOGGER.info("INFO: successfully created/updated information key '{0}'".format(newKey))
+			LOGGER.info("INFO: successfully created/updated information key '{0}'".format(newKey))
 		else:
 			if newKey not in customKeys:
-				LOGGER.info("INFO: unable to create key '{0}': check your account permissions!".format(newKey))
+				LOGGER.warning("INFO: unable to create key '{0}': check your account permissions!".format(newKey))
 
 
 def get_credentials(input_file=None):
@@ -94,10 +93,10 @@ def get_credentials(input_file=None):
 					s_password = fo.readline()
 				return (s_username, s_password)
 			else:
-				LOGGER.info("INFO: file permission (" + filemode + ") not matching 0600!")
+				LOGGER.warning("INFO: file permission (" + filemode + ") not matching 0600!")
 				sys.exit(1)
 		except OSError:
-			LOGGER.info("INFO: file non-existent or permissions not 0600!")
+			LOGGER.warning("INFO: file non-existent or permissions not 0600!")
 			sys.exit(1)
 	elif "SATELLITE_LOGIN" in os.environ and "SATELLITE_PASSWORD" in os.environ:
 		# shell variables
@@ -114,7 +113,7 @@ def get_credentials(input_file=None):
 def check_if_api_is_supported(client):
 	api_level = client.api.getVersion()
 	if api_level not in supported_API_levels:
-		LOGGER.info("INFO: your API version (" + api_level + ") does not support the required calls. You'll need API version 1.8 (11.1) or higher!")
+		LOGGER.warning("INFO: your API version (" + api_level + ") does not support the required calls. You'll need API version 1.8 (11.1) or higher!")
 		sys.exit(1)
 	else:
 		LOGGER.info("INFO: supported API version (" + api_level + ") found.")
