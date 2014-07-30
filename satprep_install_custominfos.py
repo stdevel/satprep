@@ -79,9 +79,9 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 			if filemode == "0600":
 				if options.debug:
 					print "DEBUG: file permission (" + filemode + ") matches 0600"
-				fo = open(options.authfile, "r")
-				s_username = fo.readline()
-				s_password = fo.readline()
+				with open(options.authfile, "r") as fo:
+					s_username = fo.readline()
+					s_password = fo.readline()
 				key = client.auth.login(s_username, s_password)
 			else:
 				if options.verbose:
