@@ -50,7 +50,7 @@ def main(options):
 	key = client.auth.login(username, password)
 
 	check_if_api_is_supported(client)
-	create_custom_keys(client, key)
+	create_custom_keys(client, key, force_creation=options.force)
 
 
 def get_credentials(input_file=None):
@@ -92,7 +92,7 @@ def check_if_api_is_supported(client):
 		LOGGER.info("INFO: supported API version (" + api_level + ") found.")
 
 
-def create_custom_keys(client, session_key):
+def create_custom_keys(client, session_key, force_creation=False):
 	definedKeys = client.system.custominfo.listAllKeys(session_key)
 	defined_keys_as_str = str(definedKeys)
 
@@ -102,7 +102,7 @@ def create_custom_keys(client, session_key):
 
 		LOGGER.debug("DEBUG: about to add system information key '" + new_key + "' with description '" + CUSTOM_KEYS.get(new_key) + "'...")
 		if new_key in defined_keys_as_str:
-			if options.force:
+			if force_creation:
 				LOGGER.info("INFO: overwriting pre-existing key '" + new_key + "' with description '" + CUSTOM_KEYS.get(new_key) + "'...")
 
 				resultcode = client.system.custominfo.updateKey(
