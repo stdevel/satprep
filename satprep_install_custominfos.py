@@ -41,44 +41,15 @@ def main(options):
 		"SYSTEM_PROD": "Defines whehter the system is a production host"
 	}
 
-	# define URL and login information
-	SATELLITE_URL = "http://" + options.server + "/rpc/api"
-
 	if options.dryrun:
 		LOGGER.info("I'd like to create the following system information keys:\n{0}".format(pprint.format(customKeys)))
 		sys.exit(0)
 
-	# setup client and key depending on mode
-	client = xmlrpclib.Server(SATELLITE_URL, verbose=options.debug)
-	if options.authfile:
-		LOGGER.debug("DEBUG: using authfile")
-		try:
-			# check filemode and read file
-			filemode = oct(stat.S_IMODE(os.lstat(options.authfile).st_mode))
-			if filemode == "0600":
-				LOGGER.debug("DEBUG: file permission matches 0600")
-				with open(options.authfile, "r") as fo:
-					s_username = fo.readline()
-					s_password = fo.readline()
-				key = client.auth.login(s_username, s_password)
-			else:
-				if options.verbose:
-					LOGGER.info("INFO: file permission (" + filemode + ") not matching 0600!")
-				sys.exit(1)
-		except OSError:
-			LOGGER.info("INFO: file non-existent or permissions not 0600!")
-			sys.exit(1)
-	elif "SATELLITE_LOGIN" in os.environ and "SATELLITE_PASSWORD" in os.environ:
-		# shell variables
-		LOGGER.debug("DEBUG: checking shell variables")
-		key = client.auth.login(
-			os.environ["SATELLITE_LOGIN"], os.environ["SATELLITE_PASSWORD"])
-	else:
-		# prompt user
-		LOGGER.debug("DEBUG: prompting for login credentials")
-		s_username = raw_input("Username: ")
-		s_password = getpass.getpass("Password: ")
-		key = client.auth.login(s_username, s_password)
+	(username, password) = get_credentials(options.authfile)
+
+	satellite_url = "http://{0}/rpc/api".format(options.server)
+	client = xmlrpclib.Server(satellite_url, verbose=options.debug)
+	key = client.auth.login(username, password)
 
 	# check whether the API version matches the minimum required
 	api_level = client.api.getVersion()
@@ -112,6 +83,36 @@ def main(options):
 		else:
 			if newKey not in customKeys:
 				LOGGER.info("INFO: unable to create key '" + newKey + "': check your account permissions!")
+
+
+def get_credentials(input_file=None):
+	if input_file:
+		LOGGER.debug("DEBUG: using authfile")
+		try:
+			# check filemode and read file
+			filemode = oct(stat.S_IMODE(os.lstat(input_file).st_mode))
+			if filemode == "0600":
+				LOGGER.debug("DEBUG: file permission matches 0600")
+				with open(options.authfile, "r") as fo:
+					s_username = fo.readline()
+					s_password = fo.readline()
+				return (s_username, s_password)
+			else:
+				LOGGER.info("INFO: file permission (" + filemode + ") not matching 0600!")
+				sys.exit(1)
+		except OSError:
+			LOGGER.info("INFO: file non-existent or permissions not 0600!")
+			sys.exit(1)
+	elif "SATELLITE_LOGIN" in os.environ and "SATELLITE_PASSWORD" in os.environ:
+		# shell variables
+		LOGGER.debug("DEBUG: checking shell variables")
+		return (os.environ["SATELLITE_LOGIN"], os.environ["SATELLITE_PASSWORD"])
+	else:
+		# prompt user
+		LOGGER.debug("DEBUG: prompting for login credentials")
+		s_username = raw_input("Username: ")
+		s_password = getpass.getpass("Password: ")
+		return (s_username, s_password)
 
 
 def parse_options(args=None):
