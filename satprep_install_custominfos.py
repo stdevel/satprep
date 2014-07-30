@@ -51,13 +51,7 @@ def main(options):
 	client = xmlrpclib.Server(satellite_url, verbose=options.debug)
 	key = client.auth.login(username, password)
 
-	# check whether the API version matches the minimum required
-	api_level = client.api.getVersion()
-	if not api_level in supported_API_levels:
-		LOGGER.info("INFO: your API version (" + api_level + ") does not support the required calls. You'll need API version 1.8 (11.1) or higher!")
-		sys.exit(1)
-	else:
-		LOGGER.info("INFO: supported API version (" + api_level + ") found.")
+	check_if_api_is_supported(client)
 
 	# create keys
 	# get also pre-defined keys
@@ -113,6 +107,16 @@ def get_credentials(input_file=None):
 		s_username = raw_input("Username: ")
 		s_password = getpass.getpass("Password: ")
 		return (s_username, s_password)
+
+
+def check_if_api_is_supported(client):
+	api_level = client.api.getVersion()
+	if not api_level in supported_API_levels:
+		LOGGER.info("INFO: your API version (" + api_level + ") does not support the required calls. You'll need API version 1.8 (11.1) or higher!")
+		sys.exit(1)
+	else:
+		LOGGER.info("INFO: supported API version (" + api_level + ") found.")
+
 
 
 def parse_options(args=None):
