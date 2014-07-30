@@ -21,25 +21,23 @@ from optparse import OptionParser
 # TODO: state prod/test
 
 supported_API_levels = ["11.1", "12", "13", "13.0", "14", "14.0", "15", "15.0"]
+customKeys = {
+	"SYSTEM_OWNER": "Defines the system's owner - this is needed for creating automated maintenance reports",
+	"SYSTEM_MONITORING": "Defines whether the system is monitored",
+	"SYSTEM_MONITORING_NOTES": "Defines additional notes to the system's monitoring state (e.g. test system)",
+	"SYSTEM_CLUSTER": "Defines whether the system is part of a cluster",
+	"SYSTEM_BACKUP_NOTES": "Defines additional notes to the system's backup state (e.g. test system)",
+	"SYSTEM_BACKUP": "Defines whether the system is backed up",
+	"SYSTEM_ANTIVIR_NOTES": "Defines additional notes to the anti-virus state of a system (e.g. anti-virus is implemented using XYZ)",
+	"SYSTEM_ANTIVIR": "Defines whether the system is protected with anti-virus software",
+	"SYSTEM_PROD": "Defines whehter the system is a production host"
+}
 
 LOGGER = logging.getLogger('satprep')
 
 def main(options):
 	LOGGER.debug("Options: {0}".format(options))
 	LOGGER.debug("Args: {0}".format(args))
-
-	# define custom keys which are going to be created
-	customKeys = {
-		"SYSTEM_OWNER": "Defines the system's owner - this is needed for creating automated maintenance reports",
-		"SYSTEM_MONITORING": "Defines whether the system is monitored",
-		"SYSTEM_MONITORING_NOTES": "Defines additional notes to the system's monitoring state (e.g. test system)",
-		"SYSTEM_CLUSTER": "Defines whether the system is part of a cluster",
-		"SYSTEM_BACKUP_NOTES": "Defines additional notes to the system's backup state (e.g. test system)",
-		"SYSTEM_BACKUP": "Defines whether the system is backed up",
-		"SYSTEM_ANTIVIR_NOTES": "Defines additional notes to the anti-virus state of a system (e.g. anti-virus is implemented using XYZ)",
-		"SYSTEM_ANTIVIR": "Defines whether the system is protected with anti-virus software",
-		"SYSTEM_PROD": "Defines whehter the system is a production host"
-	}
 
 	if options.dryrun:
 		LOGGER.info("I'd like to create the following system information keys:\n{0}".format(pprint.format(customKeys)))
