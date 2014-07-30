@@ -59,7 +59,7 @@ def main(options):
 	for newKey in customKeys:
 		LOGGER.debug("DEBUG: about to add system information key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
 		if newKey in str(definedKeys):
-			if options.force == True:
+			if options.force:
 				if options.verbose:
 					LOGGER.info("INFO: overwriting pre-existing key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
 				resultcode = client.system.custominfo.updateKey(
