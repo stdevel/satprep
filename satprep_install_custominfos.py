@@ -10,7 +10,6 @@
 #
 
 from optparse import OptionParser
-import sys
 import xmlrpclib
 import stat
 import os
@@ -25,42 +24,42 @@ import pprint
 supportedAPI = ["11.1","12","13","13.0","14","14.0","15","15.0"]
 
 if __name__ == "__main__":
-        #define description, version and load parser
-        desc='''%prog is used to create the custom information keys used by satprep_snapshot.py to gather more detailed system information. You only need to create those keys once (e.g. before using the first time or after a re-installation of Satellite). Login credentials are assigned using the following shell variables:
-		
-		SATELLITE_LOGIN  username
-		SATELLITE_PASSWORD  password
-		
-		It is also possible to create an authfile (permissions 0600) for usage with this script. The first line needs to contain the username, the second line should consist of the appropriate password.
+	#define description, version and load parser
+	desc='''%prog is used to create the custom information keys used by satprep_snapshot.py to gather more detailed system information. You only need to create those keys once (e.g. before using the first time or after a re-installation of Satellite). Login credentials are assigned using the following shell variables:
+
+	SATELLITE_LOGIN  username
+	SATELLITE_PASSWORD  password
+
+	It is also possible to create an authfile (permissions 0600) for usage with this script. The first line needs to contain the username, the second line should consist of the appropriate password.
 If you're not defining variables or an authfile you will be prompted to enter your login information.
-		
-		Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(description=desc,version="%prog version 0.1")
-	
+
+	Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
+	parser = OptionParser(description=desc,version="%prog version 0.1")
+
 	#-a / --authfile
 	parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
-	
+
 	#-s / --server
 	parser.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use")
-	
-        #-q / --quiet
-        parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")
-	
-        #-d / --debug
-        parser.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs")
-	
+
+	#-q / --quiet
+	parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")
+
+	#-d / --debug
+	parser.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs")
+
 	#-n / --dry-run
 	parser.add_option("-n", "--dry-run", action="store_true", dest="dryrun", default=False, help="only simulates the creation of custom keys")
-	
+
 	#-f / --force
 	parser.add_option("-f", "--force", action="store_true", dest="force", default=False, help="overwrites previously created custom keys with the same name")
-	
-        #parse arguments
-        (options, args) = parser.parse_args()
-	
+
+	#parse arguments
+	(options, args) = parser.parse_args()
+
 	#print parameters
 	if options.debug: print "DEBUG: " + str(options) + str(args)
-	
+
 	#define custom keys which are going to be created
 	customKeys = { "SYSTEM_OWNER" : "Defines the system's owner - this is needed for creating automated maintenance reports", "SYSTEM_MONITORING" : "Defines whether the system is monitored",
 		"SYSTEM_MONITORING_NOTES" : "Defines additional notes to the system's monitoring state (e.g. test system)", "SYSTEM_CLUSTER" : "Defines whether the system is part of a cluster",
@@ -68,10 +67,10 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 		"SYSTEM_ANTIVIR_NOTES" : "Defines additional notes to the anti-virus state of a system (e.g. anti-virus is implemented using XYZ)",
 		"SYSTEM_ANTIVIR" : "Defines whether the system is protected with anti-virus software",
 		"SYSTEM_PROD" : "Defines whehter the system is a production host" }
-	
+
 	#define URL and login information
 	SATELLITE_URL = "http://"+options.server+"/rpc/api"
-	
+
 	#only show custom keys if dry-run specified
 	if options.dryrun == True:
 		#only print custom keys
@@ -80,7 +79,7 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 		#for entry in customKeys:
 			#print entry + "\t" entry.getValue()
 		exit(0)
-	
+
 	#setup client and key depending on mode
 	client = xmlrpclib.Server(SATELLITE_URL, verbose=options.debug)
 	if options.authfile:
@@ -111,7 +110,7 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 		s_username = raw_input("Username: ")
 		s_password = getpass.getpass("Password: ")
 		key = client.auth.login(s_username, s_password)
-	
+
 	#check whether the API version matches the minimum required
 	api_level = client.api.getVersion()
 	if not api_level in supportedAPI:
@@ -119,7 +118,7 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 		exit(1)
 	else:
 		if options.debug: print "INFO: supported API version ("+api_level+") found."
-	
+
 	#create keys
 	#get also pre-defined keys
 	definedKeys = client.system.custominfo.listAllKeys(key)
