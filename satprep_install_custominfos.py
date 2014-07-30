@@ -111,7 +111,7 @@ def get_credentials(input_file=None):
 
 def check_if_api_is_supported(client):
 	api_level = client.api.getVersion()
-	if not api_level in supported_API_levels:
+	if api_level not in supported_API_levels:
 		LOGGER.info("INFO: your API version (" + api_level + ") does not support the required calls. You'll need API version 1.8 (11.1) or higher!")
 		sys.exit(1)
 	else:
