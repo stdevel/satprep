@@ -34,35 +34,21 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 
 	Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 	parser = OptionParser(description=desc, version="%prog version 0.1")
-
-	#-a / --authfile
 	parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE",
 					  default="", help="defines an auth file to use instead of shell variables")
-
-	#-s / --server
 	parser.add_option("-s", "--server", dest="server", metavar="SERVER",
 					  default="localhost", help="defines the server to use")
-
-	#-q / --quiet
 	parser.add_option("-q", "--quiet", action="store_false", dest="verbose",
 					  default=True, help="don't print status messages to stdout")
-
-	#-d / --debug
 	parser.add_option("-d", "--debug", dest="debug", default=False,
 					  action="store_true", help="enable debugging outputs")
-
-	#-n / --dry-run
 	parser.add_option("-n", "--dry-run", action="store_true", dest="dryrun",
 					  default=False, help="only simulates the creation of custom keys")
-
-	#-f / --force
 	parser.add_option("-f", "--force", action="store_true", dest="force",
 					  default=False, help="overwrites previously created custom keys with the same name")
 
-	# parse arguments
 	(options, args) = parser.parse_args()
 
-	# print parameters
 	if options.debug:
 		print "DEBUG: " + str(options) + str(args)
 
@@ -77,23 +63,18 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 	# define URL and login information
 	SATELLITE_URL = "http://" + options.server + "/rpc/api"
 
-	# only show custom keys if dry-run specified
-	if options.dryrun == True:
-		# only print custom keys
+	if options.dryrun:
 		print "I'd like to create the following system information keys:\n"
 		pprint.pprint(customKeys)
-		# for entry in customKeys:
-		# print entry + "\t" entry.getValue()
 		exit(0)
 
 	# setup client and key depending on mode
 	client = xmlrpclib.Server(SATELLITE_URL, verbose=options.debug)
 	if options.authfile:
-		# use authfile
 		if options.debug:
 			print "DEBUG: using authfile"
 		try:
-				# check filemode and read file
+			# check filemode and read file
 			filemode = oct(stat.S_IMODE(os.lstat(options.authfile).st_mode))
 			if filemode == "0600":
 				if options.debug:
