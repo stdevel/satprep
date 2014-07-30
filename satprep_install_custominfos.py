@@ -9,12 +9,13 @@
 # https://github.com/stdevel
 #
 
-from optparse import OptionParser
-import xmlrpclib
-import stat
-import os
 import getpass
+import os
 import pprint
+import stat
+import sys
+import xmlrpclib
+from optparse import OptionParser
 
 # TODO: state prod/test
 
