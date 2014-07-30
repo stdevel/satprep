@@ -61,9 +61,9 @@ def get_credentials(input_file=None):
 			filemode = oct(stat.S_IMODE(os.lstat(input_file).st_mode))
 			if filemode == "0600":
 				LOGGER.debug("DEBUG: file permission matches 0600")
-				with open(options.authfile, "r") as fo:
-					s_username = fo.readline()
-					s_password = fo.readline()
+				with open(input_file, "r") as auth_file:
+					s_username = auth_file.readline()
+					s_password = auth_file.readline()
 				return (s_username, s_password)
 			else:
 				LOGGER.warning("INFO: file permission (" + filemode + ") not matching 0600!")
