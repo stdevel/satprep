@@ -28,12 +28,17 @@ def main(options):
 		print "DEBUG: " + str(options) + str(args)
 
 	# define custom keys which are going to be created
-	customKeys = {"SYSTEM_OWNER": "Defines the system's owner - this is needed for creating automated maintenance reports", "SYSTEM_MONITORING": "Defines whether the system is monitored",
-				  "SYSTEM_MONITORING_NOTES": "Defines additional notes to the system's monitoring state (e.g. test system)", "SYSTEM_CLUSTER": "Defines whether the system is part of a cluster",
-				  "SYSTEM_BACKUP_NOTES": "Defines additional notes to the system's backup state (e.g. test system)", "SYSTEM_BACKUP": "Defines whether the system is backed up",
-				  "SYSTEM_ANTIVIR_NOTES": "Defines additional notes to the anti-virus state of a system (e.g. anti-virus is implemented using XYZ)",
-				  "SYSTEM_ANTIVIR": "Defines whether the system is protected with anti-virus software",
-				  "SYSTEM_PROD": "Defines whehter the system is a production host"}
+	customKeys = {
+		"SYSTEM_OWNER": "Defines the system's owner - this is needed for creating automated maintenance reports",
+		"SYSTEM_MONITORING": "Defines whether the system is monitored",
+		"SYSTEM_MONITORING_NOTES": "Defines additional notes to the system's monitoring state (e.g. test system)",
+		"SYSTEM_CLUSTER": "Defines whether the system is part of a cluster",
+		"SYSTEM_BACKUP_NOTES": "Defines additional notes to the system's backup state (e.g. test system)",
+		"SYSTEM_BACKUP": "Defines whether the system is backed up",
+		"SYSTEM_ANTIVIR_NOTES": "Defines additional notes to the anti-virus state of a system (e.g. anti-virus is implemented using XYZ)",
+		"SYSTEM_ANTIVIR": "Defines whether the system is protected with anti-virus software",
+		"SYSTEM_PROD": "Defines whehter the system is a production host"
+	}
 
 	# define URL and login information
 	SATELLITE_URL = "http://" + options.server + "/rpc/api"
@@ -114,7 +119,6 @@ def main(options):
 		else:
 			if newKey not in customKeys:
 				print "ERROR: unable to create key '" + newKey + "': check your account permissions!"
-
 
 
 def parse_options(args=None):
