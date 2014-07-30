@@ -54,9 +54,10 @@ def main(options):
 	# create keys
 	# get also pre-defined keys
 	definedKeys = client.system.custominfo.listAllKeys(key)
-	resultcode = 0
 	LOGGER.debug("DEBUG: pre-defined custom information keys: {0}".format(definedKeys))
 	for newKey in customKeys:
+		resultcode = 0
+
 		LOGGER.debug("DEBUG: about to add system information key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
 		if newKey in str(definedKeys):
 			if options.force:
