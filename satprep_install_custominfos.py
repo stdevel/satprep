@@ -10,6 +10,7 @@
 #
 
 import getpass
+import logging
 import os
 import pprint
 import stat
@@ -21,10 +22,11 @@ from optparse import OptionParser
 
 supported_API_levels = ["11.1", "12", "13", "13.0", "14", "14.0", "15", "15.0"]
 
+LOGGER = logging.getLogger('satprep')
 
 def main(options):
-	if options.debug:
-		print "DEBUG: " + str(options) + str(args)
+	LOGGER.debug("Options: {0}".format(options))
+	LOGGER.debug("Args: {0}".format(args))
 
 	# define custom keys which are going to be created
 	customKeys = {
@@ -43,42 +45,37 @@ def main(options):
 	SATELLITE_URL = "http://" + options.server + "/rpc/api"
 
 	if options.dryrun:
-		print "I'd like to create the following system information keys:\n"
-		pprint.pprint(customKeys)
+		LOGGER.info("I'd like to create the following system information keys:\n{0}".format(pprint.format(customKeys)))
 		sys.exit(0)
 
 	# setup client and key depending on mode
 	client = xmlrpclib.Server(SATELLITE_URL, verbose=options.debug)
 	if options.authfile:
-		if options.debug:
-			print "DEBUG: using authfile"
+		LOGGER.debug("DEBUG: using authfile")
 		try:
 			# check filemode and read file
 			filemode = oct(stat.S_IMODE(os.lstat(options.authfile).st_mode))
 			if filemode == "0600":
-				if options.debug:
-					print "DEBUG: file permission (" + filemode + ") matches 0600"
+				LOGGER.debug("DEBUG: file permission matches 0600")
 				with open(options.authfile, "r") as fo:
 					s_username = fo.readline()
 					s_password = fo.readline()
 				key = client.auth.login(s_username, s_password)
 			else:
 				if options.verbose:
-					print "ERROR: file permission (" + filemode + ") not matching 0600!"
+					LOGGER.info("INFO: file permission (" + filemode + ") not matching 0600!")
 				sys.exit(1)
 		except OSError:
-			print "ERROR: file non-existent or permissions not 0600!"
+			LOGGER.info("INFO: file non-existent or permissions not 0600!")
 			sys.exit(1)
 	elif "SATELLITE_LOGIN" in os.environ and "SATELLITE_PASSWORD" in os.environ:
 		# shell variables
-		if options.debug:
-			print "DEBUG: checking shell variables"
+		LOGGER.debug("DEBUG: checking shell variables")
 		key = client.auth.login(
 			os.environ["SATELLITE_LOGIN"], os.environ["SATELLITE_PASSWORD"])
 	else:
 		# prompt user
-		if options.debug:
-			print "DEBUG: prompting for login credentials"
+		LOGGER.debug("DEBUG: prompting for login credentials")
 		s_username = raw_input("Username: ")
 		s_password = getpass.getpass("Password: ")
 		key = client.auth.login(s_username, s_password)
@@ -86,38 +83,35 @@ def main(options):
 	# check whether the API version matches the minimum required
 	api_level = client.api.getVersion()
 	if not api_level in supported_API_levels:
-		print "ERROR: your API version (" + api_level + ") does not support the required calls. You'll need API version 1.8 (11.1) or higher!"
+		LOGGER.info("INFO: your API version (" + api_level + ") does not support the required calls. You'll need API version 1.8 (11.1) or higher!")
 		sys.exit(1)
 	else:
-		if options.debug:
-			print "INFO: supported API version (" + api_level + ") found."
+		LOGGER.info("INFO: supported API version (" + api_level + ") found.")
 
 	# create keys
 	# get also pre-defined keys
 	definedKeys = client.system.custominfo.listAllKeys(key)
 	resultcode = 0
-	if options.debug:
-		print "DEBUG: pre-defined custom information keys:\n" + str(definedKeys)
+	LOGGER.debug("DEBUG: pre-defined custom information keys:\n") + str(definedKeys)
 	for newKey in customKeys:
-		if options.debug:
-			print "DEBUG: about to add system information key '" + newKey + "' with description '" + customKeys.get(newKey) + "'..."
+		LOGGER.debug("DEBUG: about to add system information key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
 		if newKey in str(definedKeys):
 			if options.force == True:
 				if options.verbose:
-					print "INFO: overwriting pre-existing key '" + newKey + "' with description '" + customKeys.get(newKey) + "'..."
+					LOGGER.info("INFO: overwriting pre-existing key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
 				resultcode = client.system.custominfo.updateKey(
 					key, newKey, customKeys.get(newKey))
 			else:
-				print "ERROR: key '" + newKey + "' already exists. Use -f / --force to overwrite!"
+				LOGGER.info("INFO: key '" + newKey + "' already exists. Use -f / --force to overwrite!")
 		else:
 			resultcode = client.system.custominfo.createKey(
 				key, newKey, customKeys.get(newKey))
 		if resultcode == 1:
 			if options.verbose:
-				print "INFO: successfully created/updated information key '" + newKey + "'"
+				LOGGER.info("INFO: successfully created/updated information key '" + newKey + "'")
 		else:
 			if newKey not in customKeys:
-				print "ERROR: unable to create key '" + newKey + "': check your account permissions!"
+				LOGGER.info("INFO: unable to create key '" + newKey + "': check your account permissions!")
 
 
 def parse_options(args=None):
