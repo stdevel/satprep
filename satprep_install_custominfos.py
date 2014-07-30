@@ -40,7 +40,7 @@ def main(options):
 	LOGGER.debug("Args: {0}".format(args))
 
 	if options.dryrun:
-		LOGGER.info("I'd like to create the following system information keys:\n{0}".format(pprint.format(CUSTOM_KEYS)))
+		LOGGER.info("I'd like to create the following system information keys:\n{0}".format(pprint.pformat(CUSTOM_KEYS)))
 		sys.exit(0)
 
 	(username, password) = get_credentials(options.authfile)
