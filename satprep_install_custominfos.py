@@ -156,4 +156,10 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 if __name__ == "__main__":
 	(options, args) = parse_options()
 
+	if options.debug:
+		logging.basicConfig(level=logging.DEBUG)
+		LOGGER.setLevel(logging.DEBUG)
+	else:
+		LOGGER.setLevel(logging.WARNING)
+
 	main(options)
