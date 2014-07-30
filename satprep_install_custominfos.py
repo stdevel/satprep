@@ -72,12 +72,13 @@ def main(options):
 		else:
 			resultcode = client.system.custominfo.createKey(
 				key, newKey, customKeys.get(newKey))
+
 		if resultcode == 1:
 			if options.verbose:
-				LOGGER.info("INFO: successfully created/updated information key '" + newKey + "'")
+				LOGGER.info("INFO: successfully created/updated information key '{0}'".format(newKey))
 		else:
 			if newKey not in customKeys:
-				LOGGER.info("INFO: unable to create key '" + newKey + "': check your account permissions!")
+				LOGGER.info("INFO: unable to create key '{0}': check your account permissions!".format(newKey))
 
 
 def get_credentials(input_file=None):
