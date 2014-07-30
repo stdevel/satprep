@@ -54,12 +54,14 @@ def main(options):
 	# create keys
 	# get also pre-defined keys
 	definedKeys = client.system.custominfo.listAllKeys(key)
+	defined_keys_as_str = str(definedKeys)
+
 	LOGGER.debug("DEBUG: pre-defined custom information keys: {0}".format(definedKeys))
 	for newKey in customKeys:
 		resultcode = 0
 
 		LOGGER.debug("DEBUG: about to add system information key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
-		if newKey in str(definedKeys):
+		if newKey in defined_keys_as_str:
 			if options.force:
 				if options.verbose:
 					LOGGER.info("INFO: overwriting pre-existing key '" + newKey + "' with description '" + customKeys.get(newKey) + "'...")
