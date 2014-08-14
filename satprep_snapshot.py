@@ -93,7 +93,6 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 				fo = open(options.authfile, "r")
 				s_username=fo.readline()
 				s_password=fo.readline()
-				#key = client.auth.login(s_username, s_password)
 			else:
 				if options.verbose: print "ERROR: file permission ("+filemode+") not matching 0600!"
 				exit(1)
