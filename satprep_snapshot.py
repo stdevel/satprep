@@ -58,7 +58,10 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 	parser.add_option("-f", "--field", action="append", type="choice", dest="fields", choices=["hostname", "ip", "errata_name", "errata_type", "errata_desc", "errata_date", "errata_reboot", "system_owner", "system_cluster","system_virt","system_monitoring","system_monitoring_notes","system_backup","system_backup_notes","system_antivir","system_antivir_notes"], help="defines which fields should be integrated in the report", metavar="FIELDS")
 	
 	#-p / --include-patches
-	parser.add_option("-p", "--include-patches", action="store_true", default=False, dest="includePatches", help="defines whether package updates that are not part of an erratum shall be included" )
+	parser.add_option("-p", "--include-patches", action="store_true", default=False, dest="includePatches", help="defines whether package updates that are not part of an erratum shall be included")
+	
+	#-r / --reconnect-threshold
+	parser.add_option("-r", "--reconnect-threshold", action="store", type="int", default=5, dest="reconnectThreshold", metavar="THRESHOLD", help="defines after how many host scans a re-login should be done (XMLRPC API timeout workaround)")
 	
         #parse arguments
         (options, args) = parser.parse_args()
@@ -67,7 +70,7 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 	if options.output is 'foobar':
 		options.output = "errata-snapshot-report-" + options.server + "-" + time.strftime("%Y%m%d-%H%M") + ".csv"
 	if options.fields is None:
-		options.fields = ["hostname","ip","errata_name","errata_type","errata_date","errata_desc","errata_date","errata_reboot","system_owner","system_cluster","system_virt","system_monitoring","system_monitoring_notes","system_backup","system_backup_notes","system_antivir","system_antivir_notes"]
+		options.fields = ["hostname","ip","errata_name","errata_type","errata_date","errata_desc","errata_reboot","system_owner","system_cluster","system_virt","system_monitoring","system_monitoring_notes","system_backup","system_backup_notes","system_antivir","system_antivir_notes"]
 	
 	#print parameters
 	if options.debug: print "DEBUG: " + str(options) + str(args)
@@ -77,6 +80,8 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 	
 	#setup client and key depending on mode
 	client = xmlrpclib.Server(SATELLITE_URL, verbose=options.debug)
+	s_username=""
+	s_password=""
 	if options.authfile:
 		#use authfile
 		if options.debug: print "DEBUG: using authfile"
@@ -88,7 +93,7 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 				fo = open(options.authfile, "r")
 				s_username=fo.readline()
 				s_password=fo.readline()
-				key = client.auth.login(s_username, s_password)
+				#key = client.auth.login(s_username, s_password)
 			else:
 				if options.verbose: print "ERROR: file permission ("+filemode+") not matching 0600!"
 				exit(1)
@@ -98,13 +103,17 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 	elif "SATELLITE_LOGIN" in os.environ and "SATELLITE_PASSWORD" in os.environ:
 		#shell variables
 		if options.debug: print "DEBUG: checking shell variables"
-		key = client.auth.login(os.environ["SATELLITE_LOGIN"], os.environ["SATELLITE_PASSWORD"])
+		s_username=os.environ["SATELLITE_LOGIN"]
+		s_password=os.environ["SATELLITE_PASSWORD"]
+		#key = client.auth.login(os.environ["SATELLITE_LOGIN"], os.environ["SATELLITE_PASSWORD"])
 	else:
 		#prompt user
 		if options.debug: print "DEBUG: prompting for login credentials"
 		s_username = raw_input("Username: ")
 		s_password = getpass.getpass("Password: ")
-		key = client.auth.login(s_username, s_password)
+		#key = client.auth.login(s_username, s_password)
+	#login
+	key = client.auth.login(s_username, s_password)
 	
 	#check whether the API version matches the minimum required
 	api_level = client.api.getVersion()
@@ -130,6 +139,8 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 		#create header and scan _all_ the systems
 		writer.writerow(options.fields)
 		systems = client.system.listSystems(key)
+		#counter variable for XMLRPC timeout workaround (https://github.com/stdevel/satprep/issues/5)
+		hostCounter=0
 		for system in systems:
 			if options.verbose: print "INFO: found host " + `system["name"]` + " (SID " + `system["id"]` + ")"
 			#scan errata per system
@@ -368,6 +379,21 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 				else:
 					#no updates relevant for system
 					if options.debug: print "DEBUG: host " + `system["name"]` + "(SID " + `system["id"]` + ") has no relevant updates."
+		
+			#increase counter and re-login if necessary
+                        if hostCounter == (options.reconnectThreshold-1):
+                                #re-login
+                                if options.verbose: print "INFO: Re-login due to XMLRPC timeout workaround!"
+                                client.auth.logout(key)
+                                key = client.auth.login(s_username, s_password)
+                                hostCounter=0
+			else:
+				#increase counter
+                                hostCounter = hostCounter + 1
+		
 	else:
 		#output file/directory not writable
 		print >> sys.stderr,  "ERROR: Output file/directory ("+options.output+") not writable"
+	
+	#logout and exit
+	client.auth.logout(key)
