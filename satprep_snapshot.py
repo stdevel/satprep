@@ -10,6 +10,7 @@
 #
 
 from optparse import OptionParser
+import logging
 import sys
 import xmlrpclib
 import os
@@ -32,7 +33,7 @@ POSSIBLE_FIELDS = ["hostname", "ip", "errata_name", "errata_type",
 	"system_monitoring_notes", "system_backup", "system_backup_notes",
 	"system_antivir", "system_antivir_notes"
 ]
-
+LOGGER = logging.getLogger('satprep-snapshot')
 
 #list of supported API levels
 supportedAPI = ["11.1","12","13","13.0","14","14.0","15","15.0"]
@@ -89,7 +90,8 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 	if options.fields is None:
 		options.fields = DEFAULT_FIELDS
 
-	if options.debug: print "DEBUG: " + str(options) + str(args)
+	LOGGER.debug("Options: {0}".format(options))
+	LOGGER.debug("Arguments: {0}".format(args))
 
 
 def main(options):
@@ -135,14 +137,19 @@ def main(options):
 	#check whether the API version matches the minimum required
 	api_level = client.api.getVersion()
 	if not api_level in supportedAPI:
-		print "ERROR: your API version ("+api_level+") does not support the required calls. You'll need API version 1.8 (11.1) or higher!"
+		LOGGER.critical(
+			"ERROR: your API version ({0}) does not support the required "
+			"calls. You'll need API version 1.8 (11.1) or higher!".format(
+				api_level
+			)
+		)
 		exit(1)
 	else:
-		if options.debug: print "INFO: supported API version ("+api_level+") found."
+		LOGGER.info("supported API version ({0}) found.".format(api_level))
 
 	#check whether the output directory/file is writable
 	if os.access(os.path.dirname(options.output), os.W_OK) or os.access(os.getcwd(), os.W_OK):
-		if options.verbose: print "INFO: output file/directory writable!"
+		LOGGER.info("output file/directory writable!")
 
 		#create CSV report, open file
 		csv.register_dialect("default", delimiter=";", quoting=csv.QUOTE_NONE)
@@ -159,13 +166,18 @@ def main(options):
 		#counter variable for XMLRPC timeout workaround (https://github.com/stdevel/satprep/issues/5)
 		hostCounter=0
 		for system in systems:
-			if options.verbose: print "INFO: found host " + `system["name"]` + " (SID " + `system["id"]` + ")"
+			LOGGER.info("found host {0[name]} (SID {0[id]})".format(system))
 			#scan errata per system
 			errata = client.system.getRelevantErrata(key, system["id"])
 			#write information if errata available
 			if len(errata) > 0:
-				for i,erratum in enumerate(errata):
-					if options.verbose: print "INFO: Having a look at relevant errata #"+str(i+1)+" for host " + `system["name"]` + " (SID " + `system["id"]` + ")..."
+				for i, erratum in enumerate(errata, start=1):
+					LOGGER.info("Having a look at relevant errata #{errata} "
+						"for host {system[name]} (SID {system[id]})...".format(
+							errata=i,
+							system=system
+						)
+					)
 					#clear value set and set information depending on given fields
 					valueSet = []
 					this_errataReboot=0
@@ -276,14 +288,21 @@ def main(options):
 					writer.writerow(valueSet)
 			else:
 				#no errata relevant for system
-				if options.debug: print "DEBUG: host " + `system["name"]` + "(SID " + `system["id"]` + ") has no relevant errata."
+				LOGGER.debug("host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
+
 			if options.includePatches:
 				#include non-errata updates
 				updates = client.system.listLatestUpgradablePackages(key, system["id"])
 				#print updates
 				if len(updates) > 0:
-					for i,update in enumerate(updates):
-						if options.verbose: print "INFO: Having a look at relevant package update #"+str(i+1)+" for host " + `system["name"]` + " (SID " + `system["id"]` + ")..."
+					for i, update in enumerate(updates, start=1):
+						LOGGER.info("Having a look at relevant package update "
+							"#{update} for host {system[name]} "
+							"(SID {system[id]})...".format(
+								update=i,
+								system=system
+							)
+						)
 						#only add update information if not already displayed as part of an erratum
 						temp = client.packages.listProvidingErrata(key, update["to_package_id"])
 						if len(temp) == 0:
@@ -392,15 +411,18 @@ def main(options):
 								writer.writerow(valueSet)
 						else:
 							#part of an erratum
-							if options.debug: print "DEBUG: dropping update " + update["name"] + "(" + str(update["to_package_id"]) + ") as it's already part of an erratum."
+							LOGGER.debug("dropping update {0[name]} "
+								"({0[to_package_id]}) as it's already part of "
+								"an erratum.".format(update)
+							)
 				else:
 					#no updates relevant for system
-					if options.debug: print "DEBUG: host " + `system["name"]` + "(SID " + `system["id"]` + ") has no relevant updates."
+					LOGGER.debug("host {0[name]} (SID {0[id]}) has no relevant updates.".format(system))
 
 			#increase counter and re-login if necessary
 			if hostCounter == (options.reconnectThreshold-1):
 				#re-login
-				if options.verbose: print "INFO: Re-login due to XMLRPC timeout workaround!"
+				LOGGER.info("Re-login due to XMLRPC timeout workaround!")
 				client.auth.logout(key)
 				key = client.auth.login(s_username, s_password)
 				hostCounter=0
@@ -410,7 +432,7 @@ def main(options):
 
 	else:
 		#output file/directory not writable
-		print >> sys.stderr,  "ERROR: Output file/directory ("+options.output+") not writable"
+		LOGGER.critical("ERROR: Output file/directory ({0}) not writable".format(options.output))
 
 	#logout and exit
 	client.auth.logout(key)
@@ -418,5 +440,11 @@ def main(options):
 
 if __name__ == "__main__":
 	(options, args) = parse_options()
+
+	if options.debug:
+		logging.basicConfig(level=logging.DEBUG)
+		LOGGER.setLevel(logging.DEBUG)
+	else:
+		LOGGER.setLevel(logging.WARNING)
 
 	main(options)
