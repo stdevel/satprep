@@ -12,6 +12,7 @@
 import csv
 import logging
 import os
+import sys
 import time
 import xmlrpclib
 from optparse import OptionParser
@@ -35,6 +36,9 @@ LOGGER = logging.getLogger('satprep-snapshot')
 
 
 def parse_options(args=None):
+	if args is None:
+		args = sys.argv
+
 	desc='''%prog is used to create snapshot CSV reports of errata available to your systems managed with Spacewalk, Red Hat Satellite and SUSE Manager. You can use two snapshot reports to create delta reports using satprep_diff.py. Login credentials are assigned using the following shell variables:
 
 SATELLITE_LOGIN  username
@@ -74,7 +78,7 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 			"(XMLRPC API timeout workaround)")
 	)
 
-	(options, args) = parser.parse_args()
+	(options, args) = parser.parse_args(args)
 
 	if options.output is 'foobar':
 		options.output = "errata-snapshot-report-{server}-{time}.csv".format(
