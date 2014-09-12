@@ -9,15 +9,12 @@
 # https://github.com/stdevel
 #
 
-from optparse import OptionParser
-import logging
-import sys
-import xmlrpclib
-import os
-import stat
-import getpass
-import time
 import csv
+import logging
+import os
+import time
+import xmlrpclib
+from optparse import OptionParser
 from satprep_shared import SUPPORTED_API_LEVELS, get_credentials
 
 #TODO: string + " " + string ==>  string,string
