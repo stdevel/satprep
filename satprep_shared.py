@@ -8,8 +8,11 @@ import sys
 
 LOGGER = LOGGER = logging.getLogger('satprep-shared')
 
-
 SUPPORTED_API_LEVELS = ["11.1", "12", "13", "13.0", "14", "14.0", "15", "15.0"]
+
+
+class APILevelNotSupportedException(Exception):
+    pass
 
 
 def get_credentials(input_file=None):
