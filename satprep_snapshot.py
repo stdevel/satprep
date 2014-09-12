@@ -114,7 +114,7 @@ def main(options):
 		writer.writerow(options.fields)
 		systems = client.system.listSystems(key)
 		#counter variable for XMLRPC timeout workaround (https://github.com/stdevel/satprep/issues/5)
-		hostCounter=0
+		hostCounter = 0
 		for system in systems:
 			process_system(client, key, writer, system)
 
@@ -124,7 +124,7 @@ def main(options):
 				LOGGER.info("Re-login due to XMLRPC timeout workaround!")
 				client.auth.logout(key)
 				key = client.auth.login(username, password)
-				hostCounter=0
+				hostCounter = 0
 			else:
 				#increase counter
 				hostCounter = hostCounter + 1
@@ -146,128 +146,109 @@ def process_system(client, key, writer, system):
 
 
 def process_erratas(client, key, writer, system):
-	#scan errata per system
-	errata = client.system.getRelevantErrata(key, system["id"])
-	#write information if errata available
-	if len(errata) > 0:
-		for i, erratum in enumerate(errata, start=1):
-			LOGGER.info("Having a look at relevant errata #{errata} "
-				"for host {system[name]} (SID {system[id]})...".format(
-					errata=i,
-					system=system
-				)
-			)
-			#clear value set and set information depending on given fields
-			valueSet = []
-			this_errataReboot=0
-			for column in options.fields:
-				if column == "hostname":
-					valueSet.append(system["name"])
-				elif column == "ip":
-					temp = client.system.getNetwork(key, system["id"])
-					valueSet.append(temp["ip"])
-				elif column == "errata_name":
-					valueSet.append(errata[i]["advisory_name"])
-				elif column == "errata_type":
-					valueSet.append(errata[i]["advisory_type"])
-				elif column == "errata_desc":
-					valueSet.append(errata[i]["advisory_synopsis"])
-				elif column == "errata_date":
-					valueSet.append(errata[i]["update_date"])
-				elif column == "errata_reboot":
-					temp = client.errata.listKeywords(key, errata[i]["advisory_name"])
-					if "reboot_suggested" in temp:
-						valueSet.append("1")
-					else:
-						valueSet.append("0")
-				elif column == "system_owner":
-					#set system owner if information available
-					temp = client.system.getCustomValues(key, system["id"])
-					if len(temp) > 0 and "SYSTEM_OWNER" in temp:
-						#replace new lines
-						tmp = temp["SYSTEM_OWNER"].split()
-						tmp = ' '.join(tmp)
-						valueSet.append(tmp)
-					else:
-						valueSet.append("null")
-				elif column == "system_cluster":
-					#set system cluster bit if information available
-					temp = client.system.getCustomValues(key, system["id"])
-					if len(temp) > 0 and "SYSTEM_CLUSTER" in temp:
-						if temp["SYSTEM_CLUSTER"] == "1":
-							valueSet.append(1)
-						else:
-							valueSet.append(0)
-					else:
-						valueSet.append(0)
-				elif column == "system_virt":
-					#set system virtualization bit if information available
-					temp = client.system.getDetails(key, system["id"])
-					if len(temp) > 0 and "virtualization" in temp:
-						valueSet.append(1)
-					else:
-						valueSet.append(0)
-				elif column == "system_monitoring":
-					#set system monitoring information if information available
-					temp = client.system.getCustomValues(key, system["id"])
-					if len(temp) > 0 and "SYSTEM_MONITORING" in temp:
-						if temp["SYSTEM_MONITORING"] == "1":
-							valueSet.append(1)
-						else:
-							valueSet.append(0)
-					else:
-						valueSet.append(0)
-				elif column == "system_monitoring_notes":
-					#set system monitoring notes if information available
-					temp = client.system.getCustomValues(key, system["id"])
-					if len(temp) > 0 and "SYSTEM_MONITORING_NOTES" in temp:
-						if temp["SYSTEM_MONITORING_NOTES"] != "":
-							valueSet.append(temp["SYSTEM_MONITORING_NOTES"])
-						else: valueSet.append("")
-					else: valueSet.append("")
-				elif column == "system_backup":
-					#set system backup information if available
-					temp = client.system.getCustomValues(key, system["id"])
-					if len(temp) > 0 and "SYSTEM_BACKUP" in temp:
-						if temp["SYSTEM_BACKUP"] == "1":
-							valueSet.append(1)
-						else:
-							valueSet.append(0)
-					else:
-						valueSet.append(0)
-				elif column == "system_backup_notes":
-					#set system backup notes if information available
-					temp = client.system.getCustomValues(key, system["id"])
-					if len(temp) > 0 and "SYSTEM_BACKUP_NOTES" in temp:
-						if temp["SYSTEM_BACKUP_NOTES"] != "":
-							valueSet.append(temp["SYSTEM_BACKUP_NOTES"])
-						else: valueSet.append("")
-					else: valueSet.append("")
-				elif column == "system_antivir":
-					#set system backup information if available
-					temp = client.system.getCustomValues(key, system["id"])
-					if len(temp) > 0 and "SYSTEM_ANTIVIR" in temp:
-						if temp["SYSTEM_ANTIVIR"] == "1":
-							valueSet.append(1)
-						else:
-							valueSet.append(0)
-					else:
-						valueSet.append(0)
-				elif column == "system_antivir_notes":
-					#set system antivir notes if information available
-					temp = client.system.getCustomValues(key, system["id"])
-					if len(temp) > 0 and "SYSTEM_ANTIVIR_NOTES" in temp:
-						if temp["SYSTEM_ANTIVIR_NOTES"] != "":
-							valueSet.append(temp["SYSTEM_ANTIVIR_NOTES"])
-						else: valueSet.append("")
-					else: valueSet.append("")
+	columnErrataMapping = {
+		"hostname": "name",
+		"errata_name": "advisory_name",
+		"errata_type": "advisory_type",
+		"errata_desc": "advisory_synopsis",
+		"errata_date": "update_date",
+	}
 
-			#write CSV row if information found
-			#if len(valueSet) > 0: writer.writerow(valueSet)
-			writer.writerow(valueSet)
-	else:
-		#no errata relevant for system
+	errata = client.system.getRelevantErrata(key, system["id"])
+	if not errata:
 		LOGGER.debug("host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
+		return
+
+	for i, erratum in enumerate(errata, start=1):
+		LOGGER.info("Having a look at relevant errata #{errata} "
+			"for host {system[name]} (SID {system[id]})...".format(
+				errata=i,
+				system=system
+			)
+		)
+
+		valueSet = []
+		for column in options.fields:
+			try:
+				valueSet.append(system[columnErrataMapping[column]])
+				continue
+			except KeyError:
+				# Key not found - probably needs more logic.
+				pass
+
+			if column == "ip":
+				temp = client.system.getNetwork(key, system["id"])
+				valueSet.append(temp["ip"])
+			elif column == "errata_reboot":
+				temp = client.errata.listKeywords(key, errata[i]["advisory_name"])
+				if "reboot_suggested" in temp:
+					valueSet.append("1")
+				else:
+					valueSet.append("0")
+			elif column == "system_owner":
+				temp = client.system.getCustomValues(key, system["id"])
+				if temp and "SYSTEM_OWNER" in temp:
+					valueSet.append(' '.join(temp["SYSTEM_OWNER"].split()))
+				else:
+					valueSet.append("null")
+			elif column == "system_cluster":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_CLUSTER" in temp
+					and temp["SYSTEM_CLUSTER"] == "1"):
+
+					valueSet.append(1)
+				else:
+					valueSet.append(0)
+			elif column == "system_virt":
+				temp = client.system.getDetails(key, system["id"])
+				if temp and "virtualization" in temp:
+					valueSet.append(1)
+				else:
+					valueSet.append(0)
+			elif column == "system_monitoring":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_MONITORING" in temp and
+					temp["SYSTEM_MONITORING"] == "1"):
+
+					valueSet.append(1)
+				else:
+					valueSet.append(0)
+			elif column == "system_monitoring_notes":
+				temp = client.system.getCustomValues(key, system["id"])
+				if temp and "SYSTEM_MONITORING_NOTES" in temp:
+					valueSet.append(temp["SYSTEM_MONITORING_NOTES"])
+				else:
+					valueSet.append("")
+			elif column == "system_backup":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_BACKUP" in temp
+					and temp["SYSTEM_BACKUP"] == "1"):
+
+					valueSet.append(1)
+				else:
+					valueSet.append(0)
+			elif column == "system_backup_notes":
+				temp = client.system.getCustomValues(key, system["id"])
+				if temp and "SYSTEM_BACKUP_NOTES" in temp:
+					valueSet.append(temp["SYSTEM_BACKUP_NOTES"])
+				else:
+					valueSet.append("")
+			elif column == "system_antivir":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_ANTIVIR" in temp
+					and temp["SYSTEM_ANTIVIR"] == "1"):
+
+					valueSet.append(1)
+				else:
+					valueSet.append(0)
+			elif column == "system_antivir_notes":
+				temp = client.system.getCustomValues(key, system["id"])
+				if temp and "SYSTEM_ANTIVIR_NOTES" in temp:
+					valueSet.append(temp["SYSTEM_ANTIVIR_NOTES"])
+				else:
+					valueSet.append("")
+
+		writer.writerow(valueSet)
 
 
 def process_patches(client, key, writer, system):
