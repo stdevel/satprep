@@ -385,7 +385,7 @@ def main(options):
 				#re-login
 				LOGGER.info("Re-login due to XMLRPC timeout workaround!")
 				client.auth.logout(key)
-				key = client.auth.login(s_username, s_password)
+				key = client.auth.login(username, password)
 				hostCounter=0
 			else:
 				#increase counter
