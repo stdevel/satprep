@@ -18,7 +18,7 @@ import stat
 import getpass
 import time
 import csv
-from satprep_shared import get_credentials
+from satprep_shared import SUPPORTED_API_LEVELS, get_credentials
 
 #TODO: string + " " + string ==>  string,string
 #TODO: escaping ==> r'\tbla}t'
@@ -35,9 +35,6 @@ POSSIBLE_FIELDS = ["hostname", "ip", "errata_name", "errata_type",
 	"system_antivir", "system_antivir_notes"
 ]
 LOGGER = logging.getLogger('satprep-snapshot')
-
-#list of supported API levels
-supportedAPI = ["11.1","12","13","13.0","14","14.0","15","15.0"]
 
 
 def parse_options(args=None):
@@ -104,7 +101,7 @@ def main(options):
 
 	#check whether the API version matches the minimum required
 	api_level = client.api.getVersion()
-	if not api_level in supportedAPI:
+	if api_level not in SUPPORTED_API_LEVELS:
 		LOGGER.critical(
 			"ERROR: your API version ({0}) does not support the required "
 			"calls. You'll need API version 1.8 (11.1) or higher!".format(
