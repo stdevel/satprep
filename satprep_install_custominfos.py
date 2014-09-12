@@ -14,7 +14,7 @@ import pprint
 import sys
 import xmlrpclib
 from optparse import OptionParser
-from satprep_shared import APILevelNotSupportedException, SUPPORTED_API_LEVELS, get_credentials
+from satprep_shared import check_if_api_is_supported, get_credentials
 # TODO: state prod/test
 
 CUSTOM_KEYS = {
@@ -47,17 +47,6 @@ def main(options):
 
 	check_if_api_is_supported(client)
 	create_custom_keys(client, key, force_creation=options.force)
-
-
-def check_if_api_is_supported(client):
-	api_level = client.api.getVersion()
-	if api_level not in SUPPORTED_API_LEVELS:
-		raise APILevelNotSupportedException(
-			"Your API version ({0}) does not support the required calls. "
-			"You'll need API version 1.8 (11.1) or higher!".format(api_level)
-		)
-	else:
-		LOGGER.info("INFO: supported API version (" + api_level + ") found.")
 
 
 def create_custom_keys(client, session_key, force_creation=False):

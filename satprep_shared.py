@@ -15,6 +15,16 @@ class APILevelNotSupportedException(Exception):
     pass
 
 
+def check_if_api_is_supported(client):
+    api_level = client.api.getVersion()
+    if api_level not in SUPPORTED_API_LEVELS:
+        raise APILevelNotSupportedException(
+            "Your API version ({0}) does not support the required calls. "
+            "You'll need API version 1.8 (11.1) or higher!".format(api_level)
+        )
+    else:
+        LOGGER.info("INFO: supported API version (" + api_level + ") found.")
+
 def get_credentials(input_file=None):
     if input_file:
         LOGGER.debug("DEBUG: using authfile")

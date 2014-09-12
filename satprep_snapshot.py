@@ -16,7 +16,7 @@ import sys
 import time
 import xmlrpclib
 from optparse import OptionParser
-from satprep_shared import APILevelNotSupportedException, SUPPORTED_API_LEVELS, get_credentials
+from satprep_shared import check_if_api_is_supported, get_credentials
 
 #TODO: string + " " + string ==>  string,string
 #TODO: escaping ==> r'\tbla}t'
@@ -100,17 +100,7 @@ def main(options):
 	client = xmlrpclib.Server(sattelite_url, verbose=options.debug)
 	key = client.auth.login(username, password)
 
-	#check whether the API version matches the minimum required
-	api_level = client.api.getVersion()
-	if api_level not in SUPPORTED_API_LEVELS:
-		raise APILevelNotSupportedException(
-			"ERROR: your API version ({0}) does not support the required "
-			"calls. You'll need API version 1.8 (11.1) or higher!".format(
-				api_level
-			)
-		)
-	else:
-		LOGGER.info("supported API version ({0}) found.".format(api_level))
+	check_if_api_is_supported(client)
 
 	#check whether the output directory/file is writable
 	if os.access(os.path.dirname(options.output), os.W_OK) or os.access(os.getcwd(), os.W_OK):
