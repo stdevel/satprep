@@ -18,6 +18,7 @@ import stat
 import getpass
 import time
 import csv
+from satprep_shared import get_credentials
 
 #TODO: string + " " + string ==>  string,string
 #TODO: escaping ==> r'\tbla}t'
@@ -95,44 +96,11 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 
 
 def main(options):
-	#define URL and login information
-	SATELLITE_URL = "http://"+options.server+"/rpc/api"
+	(username, password) = get_credentials(options.authfile)
 
-	#setup client and key depending on mode
-	client = xmlrpclib.Server(SATELLITE_URL, verbose=options.debug)
-	s_username=""
-	s_password=""
-	if options.authfile:
-		#use authfile
-		if options.debug: print "DEBUG: using authfile"
-		try:
-			#check filemode and read file
-			filemode = oct(stat.S_IMODE(os.lstat(options.authfile).st_mode))
-			if filemode == "0600":
-				if options.debug: print "DEBUG: file permission ("+filemode+") matches 0600"
-				fo = open(options.authfile, "r")
-				s_username=fo.readline()
-				s_password=fo.readline()
-			else:
-				if options.verbose: print "ERROR: file permission ("+filemode+") not matching 0600!"
-				exit(1)
-		except OSError:
-			print "ERROR: file non-existent or permissions not 0600!"
-			exit(1)
-	elif "SATELLITE_LOGIN" in os.environ and "SATELLITE_PASSWORD" in os.environ:
-		#shell variables
-		if options.debug: print "DEBUG: checking shell variables"
-		s_username=os.environ["SATELLITE_LOGIN"]
-		s_password=os.environ["SATELLITE_PASSWORD"]
-		#key = client.auth.login(os.environ["SATELLITE_LOGIN"], os.environ["SATELLITE_PASSWORD"])
-	else:
-		#prompt user
-		if options.debug: print "DEBUG: prompting for login credentials"
-		s_username = raw_input("Username: ")
-		s_password = getpass.getpass("Password: ")
-		#key = client.auth.login(s_username, s_password)
-	#login
-	key = client.auth.login(s_username, s_password)
+	sattelite_url = "http://{0}/rpc/api".format(options.server)
+	client = xmlrpclib.Server(sattelite_url, verbose=options.debug)
+	key = client.auth.login(username, password)
 
 	#check whether the API version matches the minimum required
 	api_level = client.api.getVersion()
