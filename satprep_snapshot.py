@@ -26,8 +26,8 @@ import csv
 #list of supported API levels
 supportedAPI = ["11.1","12","13","13.0","14","14.0","15","15.0"]
 
-if __name__ == "__main__":
-	#define description, version and load parser
+
+def parse_options(args=None):
 	desc='''%prog is used to create snapshot CSV reports of errata available to your systems managed with Spacewalk, Red Hat Satellite and SUSE Manager. You can use two snapshot reports to create delta reports using satprep_diff.py. Login credentials are assigned using the following shell variables:
 
 SATELLITE_LOGIN  username
@@ -75,6 +75,8 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 	#print parameters
 	if options.debug: print "DEBUG: " + str(options) + str(args)
 
+
+def main(options):
 	#define URL and login information
 	SATELLITE_URL = "http://"+options.server+"/rpc/api"
 
@@ -396,3 +398,9 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 
 	#logout and exit
 	client.auth.logout(key)
+
+
+if __name__ == "__main__":
+	(options, args) = parse_options()
+
+	main(options)
