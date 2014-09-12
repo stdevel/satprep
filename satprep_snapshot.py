@@ -187,10 +187,10 @@ def main(options):
 							#set system cluster bit if information available
 							temp = client.system.getCustomValues(key, system["id"])
 							if len(temp) > 0 and "SYSTEM_CLUSTER" in temp:
-							if temp["SYSTEM_CLUSTER"] == "1":
-								valueSet.append(1)
-							else:
-								valueSet.append(0)
+								if temp["SYSTEM_CLUSTER"] == "1":
+									valueSet.append(1)
+								else:
+									valueSet.append(0)
 							else:
 								valueSet.append(0)
 						elif column == "system_virt":
