@@ -29,7 +29,7 @@ CUSTOM_KEYS = {
         "SYSTEM_PROD": "Defines whehter the system is a production host"
 }
 
-LOGGER = logging.getLogger('satprep')
+LOGGER = logging.getLogger('satprep_install_custominfos')
 
 def main(options):
         LOGGER.debug("Options: {0}".format(options))
@@ -138,6 +138,7 @@ if __name__ == "__main__":
                 logging.basicConfig(level=logging.DEBUG)
                 LOGGER.setLevel(logging.DEBUG)
         else:
+                logging.basicConfig()
                 LOGGER.setLevel(logging.WARNING)
 
         main(options)
