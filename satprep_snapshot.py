@@ -398,6 +398,7 @@ if __name__ == "__main__":
 		logging.basicConfig(level=logging.DEBUG)
 		LOGGER.setLevel(logging.DEBUG)
 	else:
+		logging.basicConfig()
 		LOGGER.setLevel(logging.WARNING)
 
 	main(options)
