@@ -4,8 +4,8 @@ satprep
 **satprep** is a Python toolkit for generating CSV/PDF patch reports for systems managed with [Spacewalk](http://www.spacewalkproject.org/), [Red Hat Satellite](http://www.redhat.com/products/enterprise-linux/satellite/) or [SUSE Manager](http://www.suse.com/products/suse-manager/).
  
 This can be very useful if you need to document software changes due to IT certifications like [ISO/IEC 27001:2005](http://en.wikipedia.org/wiki/ISO/IEC_27001:2005) or many other.
- 
-After doing maintenance tasks this toolkit can create detailed change reports per host.
+
+After doing maintenance tasks this toolkit can create detailed change reports per host. Before rebooting patched systems you can also automate scheduling downtime for your systems monitored by [Nagios](http://www.nagios.org/), [Icinga](http://www.icinga.org/), [Thruk](http://www.thruk.org/) and [Shinken](http://www.shinken-monitoring.org).
 
 
 
@@ -20,7 +20,7 @@ A maintenance report looks like this:
 How does it work?
 =================
 
-The toolkit consists of three scripts:
+The toolkit consists of four scripts:
 
 
 1. `satprep_install_custominfo.py` - installs necessary custom information (*see above*) for your hosts managed with Spacewalk, Red Hat Satellite or SUSE Manager. You will need to execute this script once to make sure that all information can be assigned
@@ -30,6 +30,7 @@ The toolkit consists of three scripts:
   * system owner / cluster member / monitoring / backup / anti-virus status (*optional*)
   * errata information including name, date, description, advisory type (*security/bugfix/enhancement update*) and even whether a reboot is required
   * also regular patch information (*optional*)
+4. `satprep_schedule_downtime.py` - schedules downtimes for affected systems monitored by Nagios, Icinga, Thruk or Shinken
 3. `satprep_diff.py` - creates the delta, required to create the maintenance reports
  
 
@@ -38,22 +39,19 @@ Make sure to follow this procedure to document your maintenance tasks:
 
 1. do a complete patch/errata inventory of your landscape: `./satprep_snapshot.py`
 2. notice that a CSV report was created: `errata-snapshot-report-$RHNhostname-YYYYMMDD-HHMM.csv`
-3. complete your system maintenance tasks (*create virtual machine snapshots, patch and reboot systems, etc.*)
+3. complete your system maintenance tasks (*create virtual machine snapshots, patch and reboot systems, etc.*), run `./satprep_schedule_downtime.py` in case your systems are monitored with Nagios, Icinga, Thruk or Shinken
 4. do another complete patch/errata inventory: `./satprep_snapshot.py`
 5. create a difference report and host reports: `./satprep_diff.py *.csv`
 
 Afterwards the reports are stored in `/tmp`.
 
-For gathering optional semantic information (*e.g. backup and monitoring*) the script makes usage of the **custom system information** feature of Spacewalk, Red Hat Satellite or SUSE Manager. After installing the custom keys using the `satprep_install_custominfo.py` utility you can assign the following information per host:
+For gathering optional semantic information (*e.g. backup and monitoring*) the script makes usage of the **custom system information** feature of Spacewalk, Red Hat Satellite or SUSE Manager. After installing the custom keys using the `satprep_install_custominfo.py` utility you can assign the following information per host (*only a selection*):
 * **SYSTEM_OWNER** - server responsible in your team
-* **SYSTEM_CLUSTER** - defines whether the host is a cluster system
-* **SYSTEM_MONITORING** - monitoring state (*0 or empty = disabled, 1 = enabled*)
-* **SYSTEM_MONITORING_NOTES** - notes explaining why the monitoring is unavailable (*e.g. test system*)
+* **SYSTEM_MONITORING** - monitoring state (*0 or empty = disabled, 1 = enabled*))
 * **SYSTEM_BACKUP** - defines whether the host is protected using backups (*0 or empty = no, 1 = yes*)
-* **SYSTEM_BACKUP_NOTES** - notes explaining why backup is not configured (*e.g. development system*)
 * **SYSTEM_ANTIVIR** - defines whether the host is protected against viruses (*0 or empty = no, 1 = yes*)
-* **SYSTEM_ANTIVIR_NOTES** - explanation why anti-virus is not configured (*e.g. no concept*)
 
+See the [wiki](https://github.com/stdevel/satprep/wiki) for more details about the particular scripts.
 
 
 Requirements
@@ -93,61 +91,32 @@ Usually these modules should already be part of your LaTeX or TeX Live distribut
 Usage
 =====
 
-The appropriate tools have plenty of command line options to customize your reports:
-```
-$ ./satprep_snapshot.py -f FOOBAR
-Usage: satprep_snapshot.py [options]
-
-satprep_snapshot.py: error: option -f: invalid choice: 'FOOBAR' (choose from 'hostname', 'ip', 'errata_name', 'errata_type', 'errata_desc', 'errata_date', 'errata_reboot', 'system_owner', 'system_cluster', 'system_virt', 'system_monitoring', 'system_monitoring_notes', 'system_backup', 'system_backup_notes', 'system_antivir', 'system_antivir_notes')
-```
-
-```
-$ ./satprep_diff.py -h
-…
-
-Options:
-  --version             show program's version number and exit
-  -h, --help            show this help message and exit
-  -q, --quiet           don't print status messages to stdout
-  -d, --debug           enable debugging outputs
-  -t FILE, --template=FILE
-                        defines the template which is used to generate the
-                        report
-  -o FILE, --output=FILE
-                        define report filename. (default: errata-diff-report-
-                        Ymd.csv)
-  -n, --no-host-reports
-                        only create delta CSV report and skip creating host
-                        reports
-  -x, --preserve-tex    keeps the TeX files after creating the PDF reports
-                        (default: no)
-  -p [landscape|potrait], --page-orientation=[landscape|potrait]
-                        defines the orientation of the PDF report (default:
-                        landscape)
-  -i FILE, --image=FILE
-                        defines a different company logo
-  -f STRING, --footer=STRING
-                        changes footer text
-  -b PATH, --pdflatex-binary=PATH
-                        location for the pdflatex binary
-```
+See the [wiki](https://github.com/stdevel/satprep/wiki) for more details about the particular scripts.
 
 
 
-Examples
-========
+Example workflow
+================
 
-Create an inventory for all managed hosts, including errata and regular patch information
+1. Create an inventory for all managed hosts, including errata and regular patch information
 ```
 $ ./satprep_snapshot.py -p
 ```
-
-Create maintenance reports with the information from two snapshot reports:
+2. Schedule downtime for affected hosts (*optional*)
 ```
-$ ./satprep_diff.py -x errata-snapshot-report-localhost-20140728-23*
+$ ./satprep_schedule_downtime.py -u admin -p password errata-snapshot-report-localhost-20140728-23*.csv
+```
+3. Patch your systems, reboot them, verify functionality, etc.
+4. Create another snapshot
+```
+$ ./satprep_snapshot.py -p
+```
+5. Create maintenance reports with the information from two snapshot reports:
+```
+$ ./satprep_diff.py -x errata-snapshot-report-localhost-20140728-23*.csv
 ```
 
-Create the same reports with different page orientation, an custom logo (*e.g. company logo*) and a custom footer:
+Or create the same reports with different page orientation, an custom logo (*e.g. company logo*) and a custom footer:
 ```
 $ ./satprep_diff.py -x errata-snapshot-report-localhost-20140728-23* -p potrait -i /opt/tools/myCompany.jpg -f "myCompany maintenance report"
 ```
