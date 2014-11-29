@@ -74,6 +74,8 @@ The following Python modules are used:
 * getpass
 * xmlrpclic (*shipped with `rhnlib`*)
 * pprint
+* logging
+* requests
 
 The toolkit needs the `pdflatex` binary which is usually part of the LaTeX or TeX Live software set provided by your distributor (*for EL you’ll need the `texlive-latex`package*). You need to install one of both.
 The template which is used by **satprep** uses the following LaTeX modules:
