@@ -98,20 +98,22 @@ See the [wiki](https://github.com/stdevel/satprep/wiki) for more details about t
 Example workflow
 ================
 
-1. Create an inventory for all managed hosts, including errata and regular patch information
+Create an inventory for all managed hosts, including errata and regular patch information:
 ```
 $ ./satprep_snapshot.py -p
 ```
-2. Schedule downtime for affected hosts (*optional*)
+Schedule downtime for affected hosts (*optional*):
 ```
 $ ./satprep_schedule_downtime.py -u admin -p password errata-snapshot-report-localhost-20140728-23*.csv
 ```
-3. Patch your systems, reboot them, verify functionality, etc.
-4. Create another snapshot
+Patch your systems, reboot them, verify functionality, etc.:
+
+Create another snapshot afterwards:
 ```
 $ ./satprep_snapshot.py -p
 ```
-5. Create maintenance reports with the information from two snapshot reports:
+
+Create maintenance reports with the information from two snapshot reports:
 ```
 $ ./satprep_diff.py -x errata-snapshot-report-localhost-20140728-23*.csv
 ```
