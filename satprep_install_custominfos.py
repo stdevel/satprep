@@ -36,7 +36,8 @@ def main(options):
         LOGGER.debug("Args: {0}".format(args))
 
         if options.dryrun:
-                LOGGER.info("I'd like to create the following system information keys:\n{0}".format(pprint.pformat(CUSTOM_KEYS)))
+		if options.uninstall: LOGGER.info("I'd like to uninstall the following system information keys:\n{0}".format(pprint.pformat(CUSTOM_KEYS)))
+		else: LOGGER.info("I'd like to create the following system information keys:\n{0}".format(pprint.pformat(CUSTOM_KEYS)))
                 sys.exit(0)
 
         (username, password) = get_credentials(options.authfile)
@@ -139,6 +140,6 @@ if __name__ == "__main__":
                 LOGGER.setLevel(logging.DEBUG)
         else:
                 logging.basicConfig()
-                LOGGER.setLevel(logging.WARNING)
+                LOGGER.setLevel(logging.INFO)
 
         main(options)
