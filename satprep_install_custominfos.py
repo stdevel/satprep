@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # satprep_install_custominfos.py - a script for creating
 # custom information that can be automatically inserted in
@@ -98,21 +99,21 @@ def parse_options(args=None):
 If you're not defining variables or an authfile you will be prompted to enter your login information.
 
         Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(description=desc, version="%prog version 0.1")
-        parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE",
-                                          default="", help="defines an auth file to use instead of shell variables")
-        parser.add_option("-s", "--server", dest="server", metavar="SERVER",
-                                          default="localhost", help="defines the server to use")
-        parser.add_option("-q", "--quiet", action="store_false", dest="verbose",
-                                          default=True, help="don't print status messages to stdout")
-        parser.add_option("-d", "--debug", dest="debug", default=False,
-                                          action="store_true", help="enable debugging outputs")
-        parser.add_option("-n", "--dry-run", action="store_true", dest="dryrun",
-                                          default=False, help="only simulates the creation of custom keys")
-        parser.add_option("-f", "--force", action="store_true", dest="force",
-                                          default=False, help="overwrites previously created custom keys with the same name")
-        parser.add_option("-u", "--uninstall", action="store_true", dest="uninstall",
-                                          default=False, help="removes previously installed custom info keys")
+        parser = OptionParser(description=desc, version="%prog version 0.2")
+	#-a / --authfile
+        parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
+	#-s / --server
+        parser.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use")
+	#-q / --quiet
+        parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")
+	#-d / --debug
+        parser.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs")
+	#-n / --dry-run
+        parser.add_option("-n", "--dry-run", action="store_true", dest="dryrun", default=False, help="only simulates the creation of custom keys")
+	#-f / --force
+        parser.add_option("-f", "--force", action="store_true", dest="force", default=False, help="overwrites previously created custom keys with the same name")
+	#-u / --uninstall
+        parser.add_option("-u", "--uninstall", action="store_true", dest="uninstall", default=False, help="removes previously installed custom info keys")
 
         (options, args) = parser.parse_args(args)
 

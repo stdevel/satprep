@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # satprep_diff.py - a script for creating patch
 # diff reports
@@ -32,42 +33,31 @@ if __name__ == "__main__":
         desc='''%prog is used to create patch diff reports of systems managed with Spacewalk, Red Hat Satellite and SUSE Manager. The script needs TeXlive/LaTeX to create PDF reports. Defining your own templates is possible - the default template needs to be located in the same directory like this script.
 		
 		Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(description=desc,version="%prog version 0.1")
+        parser = OptionParser(description=desc,version="%prog version 0.2")
 	
         #-q / --quiet
         parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")
-	
         #-d / --debug
         parser.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs")
-	
 	#-t / --template
 	parser.add_option("-t", "--template", dest="template", default="default", metavar="FILE", help="defines the template which is used to generate the report")
-	
         #-o / --output
         parser.add_option("-o", "--output", action="store", type="string", dest="output", default="foobar", help="define report filename. (default: errata-diff-report-Ymd.csv)", metavar="FILE")
-	
 	#-u / --use-delta-from
 	#parser.add_option("-u", "--use-delta-from", action="store", type="string", dest="deltafile", default="", metavar="FILE", help="defines previously created delta file - useful if you don't want to re-create the delta")
-	
 	#-n / --no-host-reports
 	parser.add_option("-n", "--no-host-reports", action="store_true", default=False, dest="noHostReports", help="only create delta CSV report and skip creating host reports")
-	
 	#-x / --preserve-tex
 	parser.add_option("-x", "--preserve-tex", action="store_true", default=False, dest="preserveTex", help="keeps the TeX files after creating the PDF reports (default: no)")
-	
 	#-p / --page-orientation
 	parser.add_option("-p", "--page-orientation", action="store", type="choice", dest="pageOrientation", default="landscape", metavar="[landscape|potrait]", choices=["landscape","potrait"], help="defines the orientation of the PDF report (default: landscape)")
-	
 	#-i / --image
 	parser.add_option("-i", "--image", action="store", type="string", dest="logoImage", metavar="FILE", help="defines a different company logo")
-	
 	#-c / --csv
 	#parser.add_option("-c", "--csv", action="store", type="string", dest="csvReport", metavar="FILE", help="uses a pre-existing CSV delta report")
 	#TODO: implement
-	
 	#-f / --footer
 	parser.add_option("-f", "--footer", action="store", type="string", default="", dest="footer", metavar="STRING", help="changes footer text")
-	
 	#-b / --pdflatex-binary
 	parser.add_option("-b", "--pdflatex-binary", action="store", type="string", dest="pathPdflatex", default="/usr/bin/pdflatex", metavar="PATH", help="location for the pdflatex binary")
 	

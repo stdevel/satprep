@@ -1,4 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # satprep_snapshot.py - a script for creating a snapshot
 # report of available errata available to systems managed
@@ -48,35 +49,24 @@ It is also possible to create an authfile (permissions 0600) for usage with this
 If you're not defining variables or an authfile you will be prompted to enter your login information.
 
 Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-	parser = OptionParser(description=desc, version="%prog version 0.1")
-
-	parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE",
-		default="",
-		help="defines an auth file to use instead of shell variables")
-	parser.add_option("-s", "--server", dest="server", metavar="SERVER",
-		default="localhost", help="defines the server to use")
-	parser.add_option("-q", "--quiet", action="store_false", dest="verbose",
-		default=True, help="don't print status messages to stdout")
-	parser.add_option("-d", "--debug", dest="debug", default=False,
-		action="store_true", help="enable debugging outputs")
-	parser.add_option("-o", "--output", action="store", type="string",
-		dest="output", default="foobar", metavar="FILE",
-		help=("define CSV report filename. (default: "
-			"errata-snapshot-report-RHNhostname-Ymd.csv)")
-	)
-	parser.add_option("-f", "--field", action="append", type="choice",
-		dest="fields", choices=POSSIBLE_FIELDS, metavar="FIELDS",
-		help="defines which fields should be integrated in the report")
-	parser.add_option("-p", "--include-patches", action="store_true",
-		default=False, dest="includePatches",
-		help=("defines whether package updates that are not part of an "
-			"erratum shall be included")
-	)
-	parser.add_option("-r", "--reconnect-threshold", action="store",
-		type="int", default=5, dest="reconnectThreshold", metavar="THRESHOLD",
-		help=("defines after how many host scans a re-login should be done "
-			"(XMLRPC API timeout workaround)")
-	)
+	parser = OptionParser(description=desc, version="%prog version 0.2")
+	
+	#-a / --authfile
+	parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
+	#-s / --server
+	parser.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use")
+	#-q / --quiet
+	parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")
+	#-d / --debug
+	parser.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs")
+	#-o / --output
+	parser.add_option("-o", "--output", action="store", type="string", dest="output", default="foobar", metavar="FILE", help=("define CSV report filename. (default: " "errata-snapshot-report-RHNhostname-Ymd.csv)"))
+	#-f / --field
+	parser.add_option("-f", "--field", action="append", type="choice", dest="fields", choices=POSSIBLE_FIELDS, metavar="FIELDS", help="defines which fields should be integrated in the report")
+	#-p / --include-patches
+	parser.add_option("-p", "--include-patches", action="store_true", default=False, dest="includePatches", help=("defines whether package updates that are not part of an erratum shall be included"))
+	#-r / --reconnect-threshold
+	parser.add_option("-r", "--reconnect-threshold", action="store", type="int", default=5, dest="reconnectThreshold", metavar="THRESHOLD", help=("defines after how many host scans a re-login should be done (XMLRPC API timeout workaround)"))
 
 	(options, args) = parser.parse_args(args)
 
