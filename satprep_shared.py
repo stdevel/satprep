@@ -62,8 +62,7 @@ def get_credentials(input_file=None):
         return (s_username, s_password)
 
 def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent="", noAuth=False, unschedule=False):
-	#schedule downtime
-	
+#schedule downtime
 	#setup headers
 	if len(agent) > 0:
 		myHeaders = {'User-Agent': agent}
@@ -94,7 +93,6 @@ def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent
 		LOGGER.debug("result: {0}".format(r.text))
 	except:
 		LOGGER.debug("result: none - check URL/authentification method!")
-	
 	
 	#check whether request was successful
 	if r.status_code != 200:
