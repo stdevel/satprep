@@ -126,15 +126,23 @@ if __name__ == "__main__":
                         if options.debug: print "DEBUG: path exists and writable"
 			
 			#read reports and create delta
-			if os.path.getsize(args[0]) > os.path.getsize(args[1]):
+			if os.path.getctime(args[0]) < os.path.getctime(args[1]):
 				#file1 is bigger
 				if options.verbose: print "INFO: assuming file1 ('"+args[0]+"') is the first snapshot."
-				diff = difflib.ndiff(file1.readlines(), file2.readlines())
+				f1 = file1.readlines()
+				f2 = file2.readlines()
+				f1.sort()
+				f2.sort()
+				diff = difflib.ndiff(f1, f2)
 				this_date = datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y-%m-%d')
 			else:
 				#file2 is bigger
 				if options.verbose: print "INFO: assuming file2 ('"+args[1]+"') is the first snapshot."
-				diff = difflib.ndiff(file2.readlines(), file1.readlines())
+				f1 = file1.readlines()
+                                f2 = file2.readlines()
+                                f1.sort()
+                                f2.sort()
+				diff = difflib.ndiff(f1, f2)
 				this_date = datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y-%m-%d')
 			delta = ''.join(x[2:] for x in diff if x.startswith('- '))
 			delta = "".join([s for s in delta.strip().splitlines(True) if s.strip("\r\n").strip()])
