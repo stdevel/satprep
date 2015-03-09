@@ -5,7 +5,7 @@
 # custom information that can be automatically inserted in
 # patch reports.
 #
-# 2014 By Christian Stankowic
+# 2015 By Christian Stankowic
 # <info at stankowic hyphen development dot net>
 # https://github.com/stdevel
 #
@@ -16,7 +16,6 @@ import sys
 import xmlrpclib
 from optparse import OptionParser
 from satprep_shared import check_if_api_is_supported, get_credentials
-# TODO: state prod/test
 
 CUSTOM_KEYS = {
         "SYSTEM_OWNER": "Defines the system's owner - this is needed for creating automated maintenance reports",
@@ -27,7 +26,14 @@ CUSTOM_KEYS = {
         "SYSTEM_BACKUP": "Defines whether the system is backed up",
         "SYSTEM_ANTIVIR_NOTES": "Defines additional notes to the anti-virus state of a system (e.g. anti-virus is implemented using XYZ)",
         "SYSTEM_ANTIVIR": "Defines whether the system is protected with anti-virus software",
-        "SYSTEM_PROD": "Defines whehter the system is a production host"
+        "SYSTEM_PROD": "Defines whehter the system is a production host",
+	"SYSTEM_MONITORING_HOST": "Alternate monitoring server URL",
+	"SYSTEM_MONITORING_HOST_AUTH": "Authentification location for alternate monitoring server",
+	"SYSTEM_MONITORING_NAME": "Defines an alternative monitoring hostname",
+	"SYSTEM_VIRT_HOST": "Alternate virtual host (e.g. ESXi, vCenter) - use libvirt URI",
+	"SYSTEM_VIRT_HOST_AUTH": "Authentification location for alternate virtual host",
+	"SYSTEM_VIRT_SNAPSHOT": "Defines whether the system should be protected by a snapshot",
+	"SYSTEM_VIRT_VMNAME": "Defines an alternative VM object name"
 }
 
 LOGGER = logging.getLogger('satprep_install_custominfos')
@@ -41,7 +47,7 @@ def main(options):
 		else: LOGGER.info("I'd like to create the following system information keys:\n{0}".format(pprint.pformat(CUSTOM_KEYS)))
                 sys.exit(0)
 
-        (username, password) = get_credentials(options.authfile)
+        (username, password) = get_credentials("Satellite", options.authfile)
 
         satellite_url = "http://{0}/rpc/api".format(options.server)
         client = xmlrpclib.Server(satellite_url, verbose=options.debug)
@@ -99,7 +105,7 @@ def parse_options(args=None):
 If you're not defining variables or an authfile you will be prompted to enter your login information.
 
         Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(description=desc, version="%prog version 0.2")
+        parser = OptionParser(description=desc, version="%prog version 0.3")
 	#-a / --authfile
         parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
 	#-s / --server

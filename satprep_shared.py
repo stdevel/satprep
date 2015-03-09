@@ -11,8 +11,12 @@ from requests.auth import HTTPBasicAuth
 import time
 from datetime import datetime, timedelta
 
-LOGGER =  logging.getLogger('satprep-shared')
+#NOTES
+#TODO: add os.environ for VIRT
 
+
+
+LOGGER =  logging.getLogger('satprep-shared')
 SUPPORTED_API_LEVELS = ["11.1", "12", "13", "13.0", "14", "14.0", "15", "15.0"]
 
 
@@ -31,7 +35,7 @@ def check_if_api_is_supported(client):
     else:
         LOGGER.info("INFO: supported API version (" + api_level + ") found.")
 
-def get_credentials(input_file=None):
+def get_credentials(type, input_file=None):
 #retrieve credentials
     if input_file:
         LOGGER.debug("DEBUG: using authfile")
@@ -57,12 +61,12 @@ def get_credentials(input_file=None):
     else:
         # prompt user
         LOGGER.debug("DEBUG: prompting for login credentials")
-        s_username = raw_input("Username: ")
-        s_password = getpass.getpass("Password: ")
+        s_username = raw_input(type + " Username: ")
+        s_password = getpass.getpass(type + " Password: ")
         return (s_username, s_password)
 
 def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent="", noAuth=False, unschedule=False):
-#schedule downtime
+#(un)schedule downtime
 	#setup headers
 	if len(agent) > 0:
 		myHeaders = {'User-Agent': agent}
@@ -102,3 +106,8 @@ def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent
 		if "error" in r.text.lower(): LOGGER.error("ERROR: unable to (un)schedule downtime for host '" + host + "' - please run again with -d / --debug and check HTML output! (does this host exist?!)")
 		else: print "Successfully (un)scheduled downtime for host '" + host + "'"
 		return True
+
+def create_snapshot(virtURI, virtUsername, virtPassword, host, comment, remove=False):
+#create/remove snapshot
+	#TODO: implement pls
+	return False

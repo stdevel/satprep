@@ -5,7 +5,7 @@
 # report of available errata available to systems managed
 # with Spacewalk, Red Hat Satellite or SUSE Manager.
 #
-# 2014 By Christian Stankowic
+# 2015 By Christian Stankowic
 # <info at stankowic hyphen development dot net>
 # https://github.com/stdevel
 #
@@ -21,18 +21,13 @@ from satprep_shared import check_if_api_is_supported, get_credentials
 
 #TODO: string + " " + string ==>  string,string
 #TODO: escaping ==> r'\tbla}t'
-DEFAULT_FIELDS = ["hostname", "ip", "errata_name", "errata_type",
-	 "errata_desc", "errata_date", "errata_reboot", "system_owner",
-	 "system_cluster", "system_virt", "system_monitoring",
-	 "system_monitoring_notes", "system_backup", "system_backup_notes",
-	 "system_antivir", "system_antivir_notes"
- ]
 POSSIBLE_FIELDS = ["hostname", "ip", "errata_name", "errata_type",
-	"errata_desc", "errata_date", "errata_reboot", "system_owner",
-	"system_cluster", "system_virt", "system_monitoring",
-	"system_monitoring_notes", "system_backup", "system_backup_notes",
-	"system_antivir", "system_antivir_notes"
-]
+	 "errata_desc", "errata_date", "errata_reboot", "system_owner",
+	 "system_cluster", "system_virt", "system_virt_snapshot", "system_virt_vmname",
+ 	 "system_monitoring", "system_monitoring_notes", "system_monitoring_name",
+	 "system_backup", "system_backup_notes", "system_antivir", "system_antivir_notes"
+ ]
+DEFAULT_FIELDS = POSSIBLE_FIELDS
 LOGGER = logging.getLogger('satprep-snapshot')
 
 
@@ -49,7 +44,7 @@ It is also possible to create an authfile (permissions 0600) for usage with this
 If you're not defining variables or an authfile you will be prompted to enter your login information.
 
 Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-	parser = OptionParser(description=desc, version="%prog version 0.2")
+	parser = OptionParser(description=desc, version="%prog version 0.3")
 	
 	#-a / --authfile
 	parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
@@ -86,7 +81,7 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 
 
 def main(options):
-	(username, password) = get_credentials(options.authfile)
+	(username, password) = get_credentials("Satellite", options.authfile)
 
 	sattelite_url = "http://{0}/rpc/api".format(options.server)
 	client = xmlrpclib.Server(sattelite_url, verbose=options.debug)
@@ -216,7 +211,7 @@ def process_erratas(client, key, writer, system):
 				if temp and "SYSTEM_OWNER" in temp:
 					valueSet.append(' '.join(temp["SYSTEM_OWNER"].split()))
 				else:
-					valueSet.append("null")
+					valueSet.append("unknown")
 			elif column == "system_cluster":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_CLUSTER" in temp
@@ -230,6 +225,20 @@ def process_erratas(client, key, writer, system):
 					valueSet.append(1)
 				else:
 					valueSet.append(0)
+			elif column == "system_virt_snapshot":
+                        	temp = client.system.getCustomValues(key, system["id"])
+                                if (temp and "SYSTEM_VIRT_SNAPSHOT" in temp
+                                        and temp["SYSTEM_VIRT_SNAPSHOT"] == "1"):
+                                        valueSet.append(1)
+                                else:
+                                        valueSet.append(0)
+			elif column == "system_virt_vmname":
+                        	temp = client.system.getCustomValues(key, system["id"])
+                                if (temp and "SYSTEM_VIRT_VMNAME" in temp
+                                        and temp["SYSTEM_VIRT_VMNAME"] != ""):
+                                        valueSet.append(temp["SYSTEM_VIRT_VMNAME"])
+                                else:
+                                        valueSet.append("")
 			elif column == "system_monitoring":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_MONITORING" in temp and
@@ -241,6 +250,13 @@ def process_erratas(client, key, writer, system):
 				temp = client.system.getCustomValues(key, system["id"])
 				if temp and "SYSTEM_MONITORING_NOTES" in temp:
 					valueSet.append(temp["SYSTEM_MONITORING_NOTES"])
+				else:
+					valueSet.append("")
+			elif column == "system_monitoring_name":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_MONITORING_NAME" in temp
+					and temp["SYSTEM_MONITORING_NAME"] != ""):
+					valueSet.append(temp["SYSTEM_MONITORING_NAME"])
 				else:
 					valueSet.append("")
 			elif column == "system_backup":
@@ -337,6 +353,20 @@ def process_patches(client, key, writer, system):
 					valueSet.append(1)
 				else:
 					valueSet.append(0)
+                        elif column == "system_virt_snapshot":
+                                temp = client.system.getCustomValues(key, system["id"])
+                                if (temp and "SYSTEM_VIRT_SNAPSHOT" in temp
+                                        and temp["SYSTEM_VIRT_SNAPSHOT"] == "1"):
+                                        valueSet.append(1)
+                                else:
+                                        valueSet.append(0)
+			elif column == "system_virt_vmname":
+                        	temp = client.system.getCustomValues(key, system["id"])
+                                if (temp and "SYSTEM_VIRT_VMNAME" in temp
+                                        and temp["SYSTEM_VIRT_VMNAME"] != ""):
+                                        valueSet.append(temp["SYSTEM_VIRT_VMNAME"])
+                                else:
+                                        valueSet.append("")
 			elif column == "system_monitoring":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_MONITORING" in temp and
@@ -348,6 +378,13 @@ def process_patches(client, key, writer, system):
 				temp = client.system.getCustomValues(key, system["id"])
 				if temp and "SYSTEM_MONITORING_NOTES" in temp:
 					valueSet.append(temp["SYSTEM_MONITORING_NOTES"])
+				else:
+					valueSet.append("")
+			elif column == "system_monitoring_name":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_MONITORING_NAME" in temp
+					and temp["SYSTEM_MONITORING_NAME"] != ""):
+					valueSet.append(temp["SYSTEM_MONITORING_NAME"])
 				else:
 					valueSet.append("")
 			elif column == "system_backup":

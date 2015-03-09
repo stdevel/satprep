@@ -4,7 +4,7 @@
 # satprep_diff.py - a script for creating patch
 # diff reports
 #
-# 2014 By Christian Stankowic
+# 2015 By Christian Stankowic
 # <info at stankowic hyphen development dot net>
 # https://github.com/stdevel
 #
@@ -33,7 +33,7 @@ if __name__ == "__main__":
         desc='''%prog is used to create patch diff reports of systems managed with Spacewalk, Red Hat Satellite and SUSE Manager. The script needs TeXlive/LaTeX to create PDF reports. Defining your own templates is possible - the default template needs to be located in the same directory like this script.
 		
 		Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(description=desc,version="%prog version 0.2")
+        parser = OptionParser(description=desc,version="%prog version 0.3")
 	
         #-q / --quiet
         parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")

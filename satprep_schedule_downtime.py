@@ -4,7 +4,7 @@
 # satprep_schedule_downtime.py - a script for scheduling
 # downtimes for hosts monitored by Nagios/Icinga/Thruk/Shinken
 #
-# 2014 By Christian Stankowic
+# 2015 By Christian Stankowic
 # <info at stankowic hyphen development dot net>
 # https://github.com/stdevel
 #
@@ -26,7 +26,7 @@ def setDowntime():
 		exit(0)
 	
 	#get monitoring credentials
-	(monUsername, monPassword) = get_credentials(options.authfile)
+	(monUsername, monPassword) = get_credentials("Monitoring", options.authfile)
 	
 	#set downtime for affected hosts
 	for host in targetHosts:
@@ -100,7 +100,7 @@ def parse_options(args=None):
 	
 	# define description, version and load parser
 	desc = '''%prog is used to schedule downtimes for create the custom information keys used by satprep_snapshot.py to gather more detailed system information. You only need to create those keys once (e.g. before using the first time or after a re-installation of Satellite). Login credentials are assigned using the following shell variables:'''
-	parser = OptionParser(description=desc, version="%prog version 0.2")
+	parser = OptionParser(description=desc, version="%prog version 0.3")
 	#-a / --authfile
 	parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
 	#-u / --url
