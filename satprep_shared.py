@@ -10,9 +10,12 @@ import requests
 from requests.auth import HTTPBasicAuth
 import time
 from datetime import datetime, timedelta
+import libvirt
 
 #NOTES
 #TODO: add os.environ for VIRT
+LIBVIRT_USERNAME=""
+LIBVIRT_PASSWORD=""
 
 
 
@@ -34,6 +37,8 @@ def check_if_api_is_supported(client):
         )
     else:
         LOGGER.info("INFO: supported API version (" + api_level + ") found.")
+
+
 
 def get_credentials(type, input_file=None):
 #retrieve credentials
@@ -64,6 +69,8 @@ def get_credentials(type, input_file=None):
         s_username = raw_input(type + " Username: ")
         s_password = getpass.getpass(type + " Password: ")
         return (s_username, s_password)
+
+
 
 def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent="", noAuth=False, unschedule=False):
 #(un)schedule downtime
@@ -104,10 +111,70 @@ def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent
 		return False
 	else:
 		if "error" in r.text.lower(): LOGGER.error("ERROR: unable to (un)schedule downtime for host '" + host + "' - please run again with -d / --debug and check HTML output! (does this host exist?!)")
-		else: print "Successfully (un)scheduled downtime for host '" + host + "'"
+		else:
+			if unschedule: print "Successfully unscheduled downtime for host '" + host + "'"
+			else: print "Successfully scheduled downtime for host '" + host + "'"
 		return True
 
-def create_snapshot(virtURI, virtUsername, virtPassword, host, comment, remove=False):
+
+
+def get_libvirt_credentials(credentials, user_data):
+#get credentials for libvirt
+	global LIBVIRT_USERNAME
+	global LIBVIRT_PASSWORD
+	
+	for credential in credentials:
+		if credential[0] == libvirt.VIR_CRED_AUTHNAME:
+			# prompt the user to input a authname. display the provided message
+			#credential[4] = raw_input(credential[1] + ": ")
+			credential[4] = LIBVIRT_USERNAME
+			
+			# if the user just hits enter raw_input() returns an empty string.
+			# in this case return the default result through the last item of
+			# the list
+			if len(credential[4]) == 0:
+				credential[4] = credential[3]
+		elif credential[0] == libvirt.VIR_CRED_PASSPHRASE:
+			# use the getpass module to prompt the user to input a password.
+			# display the provided message and return the result through the
+			# last item of the list
+			#credential[4] = getpass.getpass(credential[1] + ": ")
+			credential[4] = LIBVIRT_PASSWORD
+		else:
+			return -1
+	return 0
+
+
+
+def create_snapshot(virtURI, virtUsername, virtPassword, hostUsername, hostPassword, vmName, name, comment, remove=False):
 #create/remove snapshot
-	#TODO: implement pls
-	return False
+	#authentificate
+	global LIBVIRT_USERNAME
+	global LIBVIRT_PASSWORD
+	LIBVIRT_USERNAME = hostUsername
+	LIBVIRT_PASSWORD = hostPassword
+	auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_PASSPHRASE], get_libvirt_credentials, None]
+	
+	conn = libvirt.openAuth(virtURI, auth, 0)
+	
+	if conn == None:
+		LOGGER.error("ERROR: Unable to establish connection to hypervisor!")
+		sys.exit(1)
+	
+	try:
+		targetVM = conn.lookupByName(vmName)
+		if remove:
+			#remove snapshot
+			targetSnap = targetVM.snapshotLookupByName(name, 0)
+			return targetSnap.delete(0)
+		else:
+			#create snapshot
+			snapXML = "<domainsnapshot><name>" + name + "</name><description>" + comment + "</description></domainsnapshot>"
+			return targetVM.snapshotCreateXML(snapXML, 0)
+	except Exception,e: 
+		#Snapshot 'Before maintenance' already exists
+		if remove:
+			LOGGER.error("ERROR: Unable to remove snapshot: '" + str(e) + "'")
+		else:
+			LOGGER.error("ERROR: Unable to create snapshot: '" + str(e) + "'")
+		return False

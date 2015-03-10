@@ -12,26 +12,27 @@
 
 import logging
 import sys
-from optparse import OptionParser
-from optparse import OptionGroup
+from optparse import OptionParser, OptionGroup
 import csv
-from satprep_shared import schedule_downtime, get_credentials
+from satprep_shared import schedule_downtime, get_credentials, create_snapshot
+import time
 
 #set logger
 LOGGER = logging.getLogger('satprep_prepare_maintenance')
 downtimeHosts=[]
 snapshotHosts=[]
+blacklist=["hostname","system_monitoring_name","system_virt_vmname"]
 
 #NOTES
-#
+#TODO: add custom hosts/names for creating snapshots
 
 
 
 def setDowntimes():
 	#stop if no hosts affected
-	if len(snapshotHosts) == 0:
+	if len(downtimeHosts) == 0:
 		LOGGER.info("No downtimes to schedule, going home!")
-		exit(0)
+		return False
 	
 	#get monitoring credentials
 	if options.dryrun == False: (monUsername, monPassword) = get_credentials("Monitoring", options.monAuthfile)
@@ -65,8 +66,11 @@ def setDowntimes():
 def createSnapshots():
 	#stop if no hosts affected
 	if len(snapshotHosts) == 0:
-		LOGGER.info("No downtimes to schedule, going home!")
-		exit(0)
+		LOGGER.info("No snapshots to create, going home!")
+		return False
+	
+	#set prefix
+	myPrefix=time.strftime("%Y%m%d")+"_satprep"
 	
 	#get virtualization credentials
 	if options.dryrun == False: (virtUsername, virtPassword) = get_credentials("Virtualization", options.virtAuthfile)
@@ -76,19 +80,21 @@ def createSnapshots():
 		if options.dryrun:
 			#simulation
 			if options.tidy and options.skipSnapshot == False:
-				LOGGER.info("I'd like to remove a snapshot for host '" + host + "'...")
+				#TODO: information about alternative location/auth
+				LOGGER.info("I'd like to remove a snapshot ('" + myPrefix + "') for host '" + host + "'...")
 			elif options.tidy == False and options.skipSnapshot == False:
-				LOGGER.info("I'd like to create a snapshot for host '" + host + "'...")
+				LOGGER.info("I'd like to create a snapshot ('" + myPrefix + "') for host '" + host + "'...")
 		else:
 			#_create/remove_ all the snapshots
 			if options.tidy and options.skipSnapshot == False:
-				LOGGER.info("Removing a snapshot for host '" + host + "'...")
+				LOGGER.info("Removing a snapshot ('" + myPrefix + "') for host '" + host + "'...")
 			elif options.tidy == False and options.skipSnapshot == False:
-				LOGGER.info("Creating a snapshot for host '" + host + "'...")
+				LOGGER.info("Creating a snapshot ('" + myPrefix + "') for host '" + host + "'...")
 			
 			#create/remove snapshot
-			#TODO: virtURI and custom hostname?
-			result = create_snapshot(virtURI, virtUsername, virtPassword, host, options.comment, options.tidy)
+			#TODO: custom vHost location and auth
+			#IDEA: host@HOST:PATH
+			result = create_snapshot(options.libvirtURI, virtUsername, virtPassword, virtUsername, virtPassword, host, myPrefix, options.comment, options.tidy)
 
 
 
@@ -124,18 +130,21 @@ def readFile(file):
 			else:
 				#add host to downtimeHosts if reboot required and monitoring flag set, add custom names if defined
 				if repcols["system_monitoring"] < 666 and row[repcols["system_monitoring"]] == "1" and repcols["errata_reboot"] < 666 and row[repcols["errata_reboot"]] == "1":
+					#handle custom name
 					if repcols["system_monitoring_name"] < 666 and row[repcols["system_monitoring_name"]] != "": downtimeHosts.append(row[repcols["system_monitoring_name"]])
 					else: downtimeHosts.append(row[repcols["hostname"]])
 				#add host to snapshotHosts if virtual and snapshot flag set
 				if repcols["system_virt"] < 666 and row[repcols["system_virt"]] == "1" and repcols["system_virt_snapshot"] < 666 and row[repcols["system_virt_snapshot"]] == "1":
+					#handle custom name
 					if repcols["system_virt_vmname"] < 666 and row[repcols["system_virt_vmname"]] != "": snapshotHosts.append(row[repcols["system_virt_vmname"]])
 					else: snapshotHosts.append(row[repcols["hostname"]])
 					
-	#remove duplicates and 'hostname' line
+	#remove duplicates and blacklisted lines
 	downtimeHosts = sorted(set(downtimeHosts))
 	snapshotHosts = sorted(set(snapshotHosts))
-	if "hostname" in downtimeHosts: downtimeHosts.remove("hostname")
-	if "hostname" in snapshotHosts: snapshotHosts.remove("hostname")
+	for entry in blacklist:
+		if entry in downtimeHosts: downtimeHosts.remove(entry)
+		if entry in snapshotHosts: snapshotHosts.remove(entry)
 	#print affected hosts
 	LOGGER.debug("DEBUG: affected hosts for downtimes: {0}".format(downtimeHosts))
 	LOGGER.debug("DEBUG: affected hosts for snapshots: {0}".format(snapshotHosts))
