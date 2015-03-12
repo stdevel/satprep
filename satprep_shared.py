@@ -55,30 +55,89 @@ def get_credentials(type, input_file=None):
                 return (s_username, s_password)
             else:
                 LOGGER.warning("INFO: file permission (" + filemode + ") not matching 0600!")
-                sys.exit(1)
+                #sys.exit(1)
         except OSError:
-            LOGGER.warning("INFO: file non-existent or permissions not 0600!")
-            sys.exit(1)
+		LOGGER.warning("INFO: file non-existent or permissions not 0600!")
+		#sys.exit(1)
+        	LOGGER.debug("DEBUG: prompting for login credentials as we have a faulty file")
+		s_username = raw_input(type + " Username: ")
+		s_password = getpass.getpass(type + " Password: ")
+		return (s_username, s_password)
     elif "SATELLITE_LOGIN" in os.environ and "SATELLITE_PASSWORD" in os.environ:
-        # shell variables
-        LOGGER.debug("DEBUG: checking shell variables")
-        return (os.environ["SATELLITE_LOGIN"], os.environ["SATELLITE_PASSWORD"])
+	# shell variables
+	LOGGER.debug("DEBUG: checking shell variables")
+	return (os.environ["SATELLITE_LOGIN"], os.environ["SATELLITE_PASSWORD"])
     else:
-        # prompt user
-        LOGGER.debug("DEBUG: prompting for login credentials")
-        s_username = raw_input(type + " Username: ")
-        s_password = getpass.getpass(type + " Password: ")
-        return (s_username, s_password)
+	# prompt user
+	LOGGER.debug("DEBUG: prompting for login credentials")
+	s_username = raw_input(type + " Username: ")
+	s_password = getpass.getpass(type + " Password: ")
+	return (s_username, s_password)
+
+
+
+def has_snapshot(virtURI, hostUsername, hostPassword, vmName, name):
+#check whether VM has a snapshot
+	#authentificate
+	global LIBVIRT_USERNAME
+	global LIBVIRT_PASSWORD
+	LIBVIRT_USERNAME = hostUsername
+	LIBVIRT_PASSWORD = hostPassword
+	auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_PASSPHRASE], get_libvirt_credentials, None]
+	
+	conn = libvirt.openAuth(virtURI, auth, 0)
+	
+	if conn == None:
+		LOGGER.error("ERROR: Unable to establish connection to hypervisor!")
+		return False
+	try:
+		targetVM = conn.lookupByName(vmName)
+		mySnaps = targetVM.snapshotListNames(0)
+		if name in mySnaps: return True
+	except Exception,e: 
+		return False
+
+
+
+def is_downtime(url, monUsername, monPassword, host, agent, noAuth=False):
+#check whether host is scheduled for downtime
+	#setup headers
+	if len(agent) > 0: myHeaders = {'User-Agent': agent}
+	else: myHeaders = {'User-Agent': 'satprep Toolkit (https://github.com/stdevel/satprep)'}
+	LOGGER.debug("Setting headers: {0}".format(myHeaders))
+	
+	#setup HTTP session
+	s = requests.Session()
+	if noAuth == False: s.auth = HTTPBasicAuth(monUsername, monPassword)
+	
+	#send GET request
+	r = s.get(url+"/cgi-bin/status.cgi?host=all&hostprops=1&style=hostdetail", headers=myHeaders)
+	try:
+		LOGGER.debug("result: {0}".format(r.text))
+	except:
+		LOGGER.debug("result: none - check URL/authentification method!")
+	
+	#check whether request was successful
+	if r.status_code != 200:
+		LOGGER.error("ERROR: Got HTTP status code " + str(r.status_code) + " instead of 200 while checking downtime for host '" + host + "'. Check URL and logon credentials!")
+		return False
+	else:
+		if "error" in r.text.lower(): LOGGER.error("Unable to get downtime for host '" + host + "' - please run again with -d / --debug and check HTML output! (does this host exist?!)")
+		else:
+			if host.lower() not in r.text.lower():
+				LOGGER.info("Host '" + host + "' currently NOT scheduled for downtime.")
+				return False
+			else:
+				LOGGER.info("Host '" + host + "' currently in scheduled downtime.")
+				return True
 
 
 
 def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent="", noAuth=False, unschedule=False):
 #(un)schedule downtime
 	#setup headers
-	if len(agent) > 0:
-		myHeaders = {'User-Agent': agent}
-	else:
-		myHeaders = {'User-Agent': 'satprep Toolkit (https://github.com/stdevel/satprep)'}
+	if len(agent) > 0: myHeaders = {'User-Agent': agent}
+	else: myHeaders = {'User-Agent': 'satprep Toolkit (https://github.com/stdevel/satprep)'}
 	LOGGER.debug("Setting headers: {0}".format(myHeaders))
 	
 	#setup start and end time for downtime

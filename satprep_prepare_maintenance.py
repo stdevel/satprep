@@ -14,17 +14,107 @@ import logging
 import sys
 from optparse import OptionParser, OptionGroup
 import csv
-from satprep_shared import schedule_downtime, get_credentials, create_snapshot
+from satprep_shared import schedule_downtime, get_credentials, create_snapshot, is_downtime, has_snapshot
 import time
+import os
 
 #set logger
 LOGGER = logging.getLogger('satprep_prepare_maintenance')
+
+#some global parameters
 downtimeHosts=[]
 snapshotHosts=[]
 blacklist=["hostname","system_monitoring_name","system_virt_vmname"]
+myPrefix=""
 
-#NOTES
-#TODO: add custom hosts/names for creating snapshots
+
+
+#TODO:
+#- make entering default logon credentials obsolete if all hosts have them pre-defined
+
+
+
+def verify():
+	global downtimeHosts
+	global snapshotHosts
+	global myPrefix
+	
+        #check whether the output directory/file is writable
+        if os.access(os.getcwd(), os.W_OK):
+		LOGGER.debug("Output file/directory writable!")
+		myLog = open(myPrefix+"_satprep.vlog", "w")
+	else:
+		#directory not writable
+		LOGGER.error("Output directory NOT writable!")
+		sys.exit(1)
+	
+	#check downtimes
+	if len(downtimeHosts) == 0: LOGGER.info("No downtimes to schedule.")
+	else:
+		#check _all_ the downtimes
+		(monUsername, monPassword) = get_credentials("Monitoring", options.monAuthfile)
+		
+		for host in downtimeHosts:
+			#try to get differing host/credentials
+			if "@" in host and ":" in host:
+				thisURI = host[host.find("@")+1:host.rfind(":")]
+				thisCred = host[host.rfind(":")+1:]
+				thisHost = host[:host.find("@")]
+				LOGGER.debug("Found differing host/crendials combination for monitored VM '" + thisHost + "' - Monitoring URL: '" + thisURI + "', credentials: '" + thisCred + "'")
+			else:
+				thisURI = ""
+				thisCred = ""
+				thisHost = host
+			
+			if thisURI != "" and thisCred != "":
+				#get username and password
+				(thisUsername, thisPassword) = get_credentials(thisURI, thisCred)
+				result = is_downtime(thisURI, thisUsername, thisPassword, thisHost, options.userAgent, options.noAuth)
+			else: result = is_downtime(options.URL, monUsername, monPassword, thisHost, options.userAgent, options.noAuth)
+			
+			if result:
+				#host in downtime
+				LOGGER.debug("Host '" + thisHost + "' in downtime. :)")
+				myLog.write("MONOK;" + thisHost + "\n")
+			else:
+				#host NOT in downtime
+				LOGGER.error("Host '" + thisHost + "' NOT in downtime. :(")
+				myLog.write("MONCRIT;" + thisHost + "\n")
+	
+	#check snapshots
+	if len(snapshotHosts) == 0: LOGGER.info("No snapshots to create.")
+	else:
+		#check _all_ the snapshots
+		(virtUsername, virtPassword) = get_credentials("Virtualization", options.virtAuthfile)
+		
+		for host in snapshotHosts:
+			#try to get differing host/credentials
+			if "@" in host and ":" in host:
+				thisURI = host[host.find("@")+1:host.rfind(":")]
+				thisCred = host[host.rfind(":")+1:]
+				thisHost = host[:host.find("@")]
+				LOGGER.debug("Found differing host/crendials combination for VM '" + thisHost + "' - Monitoring URL: '" + thisURI + "', credentials: '" + thisCred + "'")
+			else:
+				thisURI = ""
+				thisCred = ""
+				thisHost = host
+			
+			if thisURI != "" and thisCred != "":
+				#get username and password
+				(thisUsername, thisPassword) = get_credentials(thisURI, thisCred)
+				result = has_snapshot(thisURI, thisUsername, thisPassword, thisHost, myPrefix+"_satprep")
+			else: result = has_snapshot(options.libvirtURI, virtUsername, virtPassword, thisHost, myPrefix+"_satprep")
+			
+			if result:
+				#snapshot exists
+				LOGGER.debug("Snapshot for VM '" + thisHost + "' found. :)")
+				myLog.write("SNAPOK;" + thisHost + "\n")
+			else:
+				#snapshot non-existent
+				LOGGER.error("No snapshot for VM '" + thisHost + "' found. :(")
+				myLog.write("SNAPCRIT;" + thisHost + "\n")
+	#close log file
+	myLog.close()
 
 
 
@@ -39,27 +129,50 @@ def setDowntimes():
 	
 	#set downtime for affected hosts
 	for host in downtimeHosts:
+		#try to get differing host/credentials
+		if "@" in host and ":" in host:
+			thisURI = host[host.find("@")+1:host.rfind(":")]
+			thisCred = host[host.rfind(":")+1:]
+			thisHost = host[:host.find("@")]
+			LOGGER.debug("Found differing host/crendials combination for monitored VM '" + thisHost + "' - Monitoring URL: '" + thisURI + "', credentials: '" + thisCred + "'")
+		else:
+			thisURI = ""
+			thisCred = ""
+			thisHost = host
+		
+		output=""
 		if options.dryrun:
 			#simulation
 			if options.tidy and options.skipMonitoring == False:
-				LOGGER.info("I'd like to unschedule downtime for host '" + host + "'...")
+				output = "I'd like to unschedule downtime for host '" + thisHost
 			elif options.tidy == False and options.skipMonitoring == False:
-				LOGGER.info("I'd like to schedule downtime for host '" + host + "' for " + options.hours + " hours using the comment '" + options.comment + "'...")
+				output =  "I'd like to schedule downtime for host '" + thisHost + "' for " + options.hours + " hours using the comment '" + options.comment
+			#add differing host information
+			if thisURI != "": output = output + "' (using " + thisURI + " - " + thisCred + ")..."
+			else: output = output + "'..."
+			LOGGER.info(output)
 		else:
 			#_(un)schedule_ all the downtimes
 			if options.tidy and options.skipMonitoring == False:
-				LOGGER.debug("Unscheduling downtime for host '" + host + "'...")
+				output = "Unscheduling downtime for host '" + thisHost
 			elif options.tidy == False and options.skipMonitoring == False:
-				LOGGER.debug("Scheduling downtime for host '" + host + "' (hours=" + options.hours + ", comment=" + options.comment + ")...")
+				output = "Scheduling downtime for host '" + thisHost + "' (hours=" + options.hours + ", comment=" + options.comment
+			#add differing host information
+			if thisURI != "": output = output + "' (using " + thisURI + " - " + thisCred + ")..."
+			else: output = output + "'..."
+			LOGGER.info(output)
 			
 			#setup headers
-			if len(options.userAgent) > 0:
-				myHeaders = {'User-Agent': options.userAgent}
-			else:
-				myHeaders = {'User-Agent': 'satprep Toolkit (https://github.com/stdevel/satprep)'}
+			if len(options.userAgent) > 0: myHeaders = {'User-Agent': options.userAgent}
+			else: myHeaders = {'User-Agent': 'satprep Toolkit (https://github.com/stdevel/satprep)'}
 			
 			#(un)schedule downtime
-			result = schedule_downtime(options.URL, monUsername, monPassword, host, options.hours, options.comment, options.userAgent, options.noAuth, options.tidy)
+			if thisURI != "" and thisCred != "":
+				#get username and password
+				(thisUsername, thisPassword) = get_credentials(thisURI, thisCred)
+				result = schedule_downtime(thisURI, thisUsername, thisPassword, thisHost, options.hours, options.comment, options.userAgent, options.noAuth, options.tidy)
+			else:
+				result = schedule_downtime(options.URL, monUsername, monPassword, thisHost, options.hours, options.comment, options.userAgent, options.noAuth, options.tidy)
 
 
 
@@ -70,31 +183,52 @@ def createSnapshots():
 		return False
 	
 	#set prefix
-	myPrefix=time.strftime("%Y%m%d")+"_satprep"
+	#myPrefix=time.strftime("%Y%m%d")+"_satprep"
 	
 	#get virtualization credentials
 	if options.dryrun == False: (virtUsername, virtPassword) = get_credentials("Virtualization", options.virtAuthfile)
 	
 	#set downtime for affected hosts
 	for host in snapshotHosts:
+		#try to get differing host/credentials
+		if "@" in host and ":" in host:
+			thisURI = host[host.find("@")+1:host.rfind(":")]
+			thisCred = host[host.rfind(":")+1:]
+			thisHost = host[:host.find("@")]
+			LOGGER.debug("Found differing host/crendials combination for VM '" + thisHost + "' - libvirtURI: '" + thisURI + "', credentials: '" + thisCred + "'")
+		else:
+			thisURI = ""
+			thisCred = ""
+			thisHost = host
+		
+		output = ""
 		if options.dryrun:
 			#simulation
 			if options.tidy and options.skipSnapshot == False:
-				#TODO: information about alternative location/auth
-				LOGGER.info("I'd like to remove a snapshot ('" + myPrefix + "') for host '" + host + "'...")
+				output = "I'd like to remove a snapshot ('" + myPrefix+ "_satprep') for VM '" + thisHost
 			elif options.tidy == False and options.skipSnapshot == False:
-				LOGGER.info("I'd like to create a snapshot ('" + myPrefix + "') for host '" + host + "'...")
+				output = "I'd like to create a snapshot ('" + myPrefix + "_satprep') for VM '" + thisHost
+			#add differing host information
+			if thisURI != "": output = output + "' (using " + thisURI + " - " + thisCred + ")..."
+			else: output = output + "'..."
+			LOGGER.info(output)
 		else:
 			#_create/remove_ all the snapshots
 			if options.tidy and options.skipSnapshot == False:
-				LOGGER.info("Removing a snapshot ('" + myPrefix + "') for host '" + host + "'...")
+				output = "Removing a snapshot ('" + myPrefix + "_satprep') for VM '" + thisHost 
 			elif options.tidy == False and options.skipSnapshot == False:
-				LOGGER.info("Creating a snapshot ('" + myPrefix + "') for host '" + host + "'...")
+				output = "Creating a snapshot ('" + myPrefix + "_satprep') for VM '" + thisHost
+			#add differing host information 
+			if thisURI != "": output = output + "' (using " + thisURI + " - " + thisCred + ")..."
+			else: output = output + "'..."
+			LOGGER.info(output)
 			
 			#create/remove snapshot
-			#TODO: custom vHost location and auth
-			#IDEA: host@HOST:PATH
-			result = create_snapshot(options.libvirtURI, virtUsername, virtPassword, virtUsername, virtPassword, host, myPrefix, options.comment, options.tidy)
+			if thisURI != "" and thisCred != "":
+				#get username and password
+				(thisUsername, thisPassword) = get_credentials(thisURI, thisCred)
+				result = create_snapshot(thisURI, thisUsername, thisPassword, virtUsername, virtPassword, thisHost, myPrefix+"_satprep", options.comment, options.tidy)
+			else: result = create_snapshot(options.libvirtURI, virtUsername, virtPassword, virtUsername, virtPassword, thisHost, myPrefix+"_satprep", options.comment, options.tidy)
 
 
 
@@ -102,6 +236,11 @@ def readFile(file):
 	#get affected hosts from CSV report
 	global downtimeHosts
 	global snapshotHosts
+	global myPrefix
+	
+	#set timestamp as prefix
+	myPrefix = time.strftime("%Y%m%d", time.gmtime(os.path.getctime(args[1])))
+	
 	#read report header and get column index for hostname ,reboot and monitoring flag (if any)
 	rFile = open(args[1], 'r')
 	header = rFile.readline()
@@ -155,10 +294,17 @@ def main(options):
 	#read file and schedule downtimes
 	LOGGER.debug("Options: {0}".format(options))
 	LOGGER.debug("Args: {0}".format(args))
-	#read file, set downtimes and create snapshots
+	
+	#read file
 	readFile(args[1])
-	setDowntimes()
-	createSnapshots()
+	
+	if options.verifyOnly == True:
+		#verify only
+		verify()
+	else:
+		#schedule downtimes and create snapshots
+		if options.skipMonitoring == False: setDowntimes()
+		if options.skipSnapshot == False: createSnapshots()
 
 
 
@@ -195,11 +341,11 @@ def parse_options(args=None):
 	#-f / --no-intelligence
 	genOpts.add_option("-f", "--no-intelligence", dest="noIntelligence", action="store_true", default=False, help="disables checking for patches requiring reboot, simply schedules downtimes and creates snapshots for all hosts mentioned in the CSV report (default: no)")
 	#-n / --dry-run
-	genOpts.add_option("-n", "--dry-run", action="store_true", dest="dryrun", default=False, help="only simulates tasks that would be executed")
+	genOpts.add_option("-n", "--dry-run", action="store_true", dest="dryrun", default=False, help="only simulates tasks that would be executed (default: no)")
 	#-T / --tidy
 	genOpts.add_option("-T", "--tidy", dest="tidy", action="store_true", default=False, help="unschedules downtimes and removes previously created snapshots (default: no)")
 	#-V / --verify-only
-	vmOpts.add_option("-V", "--verify-only", dest="verify", action="store_true", default="False", help="verifies that all required downtimes and snapshots have been created and quits (default: no)")
+	genOpts.add_option("-V", "--verify-only", dest="verifyOnly", action="store_true", default="False", help="verifies that all required downtimes and snapshots have been created and quits (default: no)")
 	
 	#MONITORING OPTIONS
 	#-k / --skip-monitoring
@@ -207,11 +353,11 @@ def parse_options(args=None):
 	#-a / --mon-authfile
 	monOpts.add_option("-a", "--mon-authfile", dest="monAuthfile", metavar="FILE", default="", help="defines an auth file to use for monitoring")
 	#-u / --monitoring-url
-	monOpts.add_option("-u", "--monitorung-url", dest="URL", metavar="URL", default="http://localhost/icinga", help="defines the Nagios/Icinga/Thruk/Shinken URL to use (default: http://localhost/icinga)")
+	monOpts.add_option("-u", "--monitoring-url", dest="URL", metavar="URL", default="http://localhost/icinga", help="defines the default Nagios/Icinga/Thruk/Shinken URL to use, might be overwritten by custom system keys (default: http://localhost/icinga)")
 	#-t / --hours
 	monOpts.add_option("-t", "--hours", action="store", dest="hours", default="2", metavar="HOURS", help="sets the time period in hours hosts should be scheduled for downtime (default: 2)")
 	#-x / --no-auth
-	monOpts.add_option("-x", "--no-auth", action="store_true", default=False, dest="noAuth", help="disables HTTP basic auth (often used with Nagios/Icinga and OMD) (default: no)")
+	monOpts.add_option("-x", "--no-auth", action="store_true", default=False, dest="noAuth", help="disables HTTP basic auth (default: no)")
 	#-A / --user-agent
 	monOpts.add_option("-A", "--user-agent", action="store", default="", metavar="AGENT", dest="userAgent", help="sets a custom HTTP user agent")
 	
@@ -219,11 +365,9 @@ def parse_options(args=None):
 	#-K / --skip-snapshot
 	vmOpts.add_option("-K", "--skip-snapshot", dest="skipSnapshot", action="store_true", default=False, help="skips creating/removing snapshots (default: no)")
 	#-H / --libvirt-uri
-	vmOpts.add_option("-H", "--libvirt-uri", dest="libvirtURI", action="store", default="", metavar="URI", help="defines the URI to virtualization host or management (use libvirt URI)")
+	vmOpts.add_option("-H", "--libvirt-uri", dest="libvirtURI", action="store", default="", metavar="URI", help="defines the default URI used by libvirt, might be overwritten by custom system keys")
 	#-C / --virt-authfile
 	vmOpts.add_option("-C", "--virt-authfile", dest="virtAuthfile", action="store", metavar="FILE", default="", help="defines an auth file to use for virtualization")
-	#-X / --remove-all
-	vmOpts.add_option("-X", "--remove-all", dest="removeAll", action="store_true", default=False, help="removes all snapshots during tidying up (default: no)")
 	
 	(options, args) = parser.parse_args(args)
 	
