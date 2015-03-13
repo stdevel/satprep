@@ -26,11 +26,10 @@ downtimeHosts=[]
 snapshotHosts=[]
 blacklist=["hostname","system_monitoring_name","system_virt_vmname"]
 myPrefix=""
-
-
-
-#TODO:
-#- make entering default logon credentials obsolete if all hosts have them pre-defined
+defaultMonUser=""
+defaultMonPass=""
+defaultVirtUser=""
+defaultVirtPass=""
 
 
 
@@ -38,6 +37,10 @@ def verify():
 	global downtimeHosts
 	global snapshotHosts
 	global myPrefix
+	global defaultMonUser
+	global defaultMonPass
+	global defaultVirtUser
+	global defaultVirtPass
 	
         #check whether the output directory/file is writable
         if os.access(os.getcwd(), os.W_OK):
@@ -52,8 +55,6 @@ def verify():
 	if len(downtimeHosts) == 0: LOGGER.info("No downtimes to schedule.")
 	else:
 		#check _all_ the downtimes
-		(monUsername, monPassword) = get_credentials("Monitoring", options.monAuthfile)
-		
 		for host in downtimeHosts:
 			#try to get differing host/credentials
 			if "@" in host and ":" in host:
@@ -70,7 +71,10 @@ def verify():
 				#get username and password
 				(thisUsername, thisPassword) = get_credentials(thisURI, thisCred)
 				result = is_downtime(thisURI, thisUsername, thisPassword, thisHost, options.userAgent, options.noAuth)
-			else: result = is_downtime(options.URL, monUsername, monPassword, thisHost, options.userAgent, options.noAuth)
+			else:
+				#get default login if not in cache
+				if defaultMonUser == "": (defaultMonUser, defaultMonPass) = get_credentials("Monitoring", options.monAuthfile)
+				result = is_downtime(options.URL, defaultMonUser, defaulMonPass, thisHost, options.userAgent, options.noAuth)
 			
 			if result:
 				#host in downtime
@@ -85,8 +89,6 @@ def verify():
 	if len(snapshotHosts) == 0: LOGGER.info("No snapshots to create.")
 	else:
 		#check _all_ the snapshots
-		(virtUsername, virtPassword) = get_credentials("Virtualization", options.virtAuthfile)
-		
 		for host in snapshotHosts:
 			#try to get differing host/credentials
 			if "@" in host and ":" in host:
@@ -103,7 +105,10 @@ def verify():
 				#get username and password
 				(thisUsername, thisPassword) = get_credentials(thisURI, thisCred)
 				result = has_snapshot(thisURI, thisUsername, thisPassword, thisHost, myPrefix+"_satprep")
-			else: result = has_snapshot(options.libvirtURI, virtUsername, virtPassword, thisHost, myPrefix+"_satprep")
+			else:
+				#get default login if not in cache
+				if defaultVirtUser == "": (defaultVirtUser, derfaultVirtPass) = get_credentials("Virtualization", options.virtAuthfile)
+				result = has_snapshot(options.libvirtURI, defaultVirtUser, defaultVirtPass, thisHost, myPrefix+"_satprep")
 			
 			if result:
 				#snapshot exists
@@ -119,13 +124,14 @@ def verify():
 
 
 def setDowntimes():
+	#some globale variables
+	global defaultMonUser
+	global defaultMonPass
+	
 	#stop if no hosts affected
 	if len(downtimeHosts) == 0:
 		LOGGER.info("No downtimes to schedule, going home!")
 		return False
-	
-	#get monitoring credentials
-	if options.dryrun == False: (monUsername, monPassword) = get_credentials("Monitoring", options.monAuthfile)
 	
 	#set downtime for affected hosts
 	for host in downtimeHosts:
@@ -172,21 +178,21 @@ def setDowntimes():
 				(thisUsername, thisPassword) = get_credentials(thisURI, thisCred)
 				result = schedule_downtime(thisURI, thisUsername, thisPassword, thisHost, options.hours, options.comment, options.userAgent, options.noAuth, options.tidy)
 			else:
-				result = schedule_downtime(options.URL, monUsername, monPassword, thisHost, options.hours, options.comment, options.userAgent, options.noAuth, options.tidy)
+				#get default login if not in cache
+				if defaultMonUser == "": (defaultMonUser, defaultMonPass) = get_credentials("Monitoring", options.monAuthfile)
+				result = schedule_downtime(options.URL, defaultMonUser, defaultMonPass, thisHost, options.hours, options.comment, options.userAgent, options.noAuth, options.tidy)
 
 
 
 def createSnapshots():
+	#some globale variables
+	global defaultVirtUser
+	global defaultVirtPass
+	
 	#stop if no hosts affected
 	if len(snapshotHosts) == 0:
 		LOGGER.info("No snapshots to create, going home!")
 		return False
-	
-	#set prefix
-	#myPrefix=time.strftime("%Y%m%d")+"_satprep"
-	
-	#get virtualization credentials
-	if options.dryrun == False: (virtUsername, virtPassword) = get_credentials("Virtualization", options.virtAuthfile)
 	
 	#set downtime for affected hosts
 	for host in snapshotHosts:
@@ -224,11 +230,15 @@ def createSnapshots():
 			LOGGER.info(output)
 			
 			#create/remove snapshot
+			LOGGER.debug("***FAK " + thisURI + "|" + thisCred)
 			if thisURI != "" and thisCred != "":
 				#get username and password
 				(thisUsername, thisPassword) = get_credentials(thisURI, thisCred)
-				result = create_snapshot(thisURI, thisUsername, thisPassword, virtUsername, virtPassword, thisHost, myPrefix+"_satprep", options.comment, options.tidy)
-			else: result = create_snapshot(options.libvirtURI, virtUsername, virtPassword, virtUsername, virtPassword, thisHost, myPrefix+"_satprep", options.comment, options.tidy)
+				result = create_snapshot(thisURI, thisUsername, thisPassword, thisHost, myPrefix+"_satprep", options.comment, options.tidy)
+			else:
+				#get default login if not in cache
+				if defaultVirtUser == "": (defaultVirtUser, defaultVirtPass) = get_credentials("Virtualization", options.virtAuthfile)
+				result = create_snapshot(options.libvirtURI, defaultVirtUser, defaultVirtPass, thisHost, myPrefix+"_satprep", options.comment, options.tidy)
 
 
 
@@ -376,7 +386,8 @@ def parse_options(args=None):
 		print "ERROR: you need to specify exactly one snapshot report!"
 		exit(1)
 	
-	#TODO: check for senseful parameters
+	#tell user that he's a funny guy
+	if options.skipSnapshot and options.skipMonitoring: print "Haha, you're funny."
 	
 	return (options, args)
 

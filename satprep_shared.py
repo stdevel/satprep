@@ -12,19 +12,20 @@ import time
 from datetime import datetime, timedelta
 import libvirt
 
-#NOTES
-#TODO: add os.environ for VIRT
+
+
+#some global variables
 LIBVIRT_USERNAME=""
 LIBVIRT_PASSWORD=""
-
-
 
 LOGGER =  logging.getLogger('satprep-shared')
 SUPPORTED_API_LEVELS = ["11.1", "12", "13", "13.0", "14", "14.0", "15", "15.0"]
 
 
+
 class APILevelNotSupportedException(Exception):
     pass
+
 
 
 def check_if_api_is_supported(client):
@@ -63,10 +64,10 @@ def get_credentials(type, input_file=None):
 		s_username = raw_input(type + " Username: ")
 		s_password = getpass.getpass(type + " Password: ")
 		return (s_username, s_password)
-    elif "SATELLITE_LOGIN" in os.environ and "SATELLITE_PASSWORD" in os.environ:
+    elif type.upper()+"_LOGIN" in os.environ and type.upper()+"_PASSWORD" in os.environ:
 	# shell variables
 	LOGGER.debug("DEBUG: checking shell variables")
-	return (os.environ["SATELLITE_LOGIN"], os.environ["SATELLITE_PASSWORD"])
+	return (os.environ[type.upper()+"_LOGIN"], os.environ[type.upper()+"_PASSWORD"])
     else:
 	# prompt user
 	LOGGER.debug("DEBUG: prompting for login credentials")
@@ -83,6 +84,8 @@ def has_snapshot(virtURI, hostUsername, hostPassword, vmName, name):
 	global LIBVIRT_PASSWORD
 	LIBVIRT_USERNAME = hostUsername
 	LIBVIRT_PASSWORD = hostPassword
+	
+	LOGGER.debug("Checking for snapshots with user '" + hostUsername + "'...")
 	auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_PASSPHRASE], get_libvirt_credentials, None]
 	
 	conn = libvirt.openAuth(virtURI, auth, 0)
@@ -205,20 +208,24 @@ def get_libvirt_credentials(credentials, user_data):
 
 
 
-def create_snapshot(virtURI, virtUsername, virtPassword, hostUsername, hostPassword, vmName, name, comment, remove=False):
+#def create_snapshot(virtURI, virtUsername, virtPassword, hostUsername, hostPassword, vmName, name, comment, remove=False):
+def create_snapshot(virtURI, hostUsername, hostPassword, vmName, name, comment, remove=False):
 #create/remove snapshot
 	#authentificate
 	global LIBVIRT_USERNAME
 	global LIBVIRT_PASSWORD
 	LIBVIRT_USERNAME = hostUsername
 	LIBVIRT_PASSWORD = hostPassword
+
+	LOGGER.debug("Creating snapshot with user '" + hostUsername + "'...")
 	auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_PASSPHRASE], get_libvirt_credentials, None]
 	
 	conn = libvirt.openAuth(virtURI, auth, 0)
 	
 	if conn == None:
 		LOGGER.error("ERROR: Unable to establish connection to hypervisor!")
-		sys.exit(1)
+		#sys.exit(1)
+		return False
 	
 	try:
 		targetVM = conn.lookupByName(vmName)

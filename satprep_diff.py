@@ -9,7 +9,8 @@
 # https://github.com/stdevel
 #
 
-from optparse import OptionParser
+import logging
+from optparse import OptionParser, OptionGroup
 import ConfigParser
 import sys
 import os
@@ -20,49 +21,71 @@ import csv
 import string
 import datetime
 
+#define logger
+LOGGER = logging.getLogger('satprep_diff')
+
 #TODO: delete original snapshots after creating delta option
 #TODO: use pre-existing delta CSV instead of creating one (e.g. for testing purposes)
+#TODO: implement support of verification logs to include snapshot and downtime creation; input done - mention in report
 
 
 
 class LaTeXTemplate(string.Template):
 	delimiter = "%%"
 
-if __name__ == "__main__":
-        #define description, version and load parser
+def parse_options(args=None):
+	if args is None:
+		args = sys.argv
+	
+        #define usage, description, version and load parser
+	usage = "usage: %prog [options] snapshot.csv snapshot.csv"
         desc='''%prog is used to create patch diff reports of systems managed with Spacewalk, Red Hat Satellite and SUSE Manager. The script needs TeXlive/LaTeX to create PDF reports. Defining your own templates is possible - the default template needs to be located in the same directory like this script.
 		
 		Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(description=desc,version="%prog version 0.3")
+        parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3")
+        #define option groups
+        genOpts = OptionGroup(parser, "Generic Options")
+        repOpts = OptionGroup(parser, "Report Options")
+        parser.add_option_group(genOpts)
+        parser.add_option_group(repOpts)
 	
-        #-q / --quiet
-        parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")
+	#GENERIC OPTIONS
         #-d / --debug
-        parser.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs")
+        genOpts.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs (default: no)")
+	#-b / --pdflatex-binary
+	genOpts.add_option("-b", "--pdflatex-binary", action="store", type="string", dest="pathPdflatex", default="/usr/bin/pdflatex", metavar="PATH", help="location for the pdflatex binary (default: /usr/bin/pdflatex)")
+	
+	#REPORT OPTIONS
 	#-t / --template
-	parser.add_option("-t", "--template", dest="template", default="default", metavar="FILE", help="defines the template which is used to generate the report")
+	repOpts.add_option("-t", "--template", dest="template", default="default", metavar="FILE", help="defines the template which is used to generate the report (default: cwd/default.tex)")
         #-o / --output
-        parser.add_option("-o", "--output", action="store", type="string", dest="output", default="foobar", help="define report filename. (default: errata-diff-report-Ymd.csv)", metavar="FILE")
+        repOpts.add_option("-o", "--output", action="store", type="string", dest="output", default="foobar", help="define report filename. (default: errata-diff-report-Ymd.csv)", metavar="FILE")
 	#-u / --use-delta-from
-	#parser.add_option("-u", "--use-delta-from", action="store", type="string", dest="deltafile", default="", metavar="FILE", help="defines previously created delta file - useful if you don't want to re-create the delta")
+	#repOpts.add_option("-u", "--use-delta-from", action="store", type="string", dest="deltafile", default="", metavar="FILE", help="defines previously created delta file - useful if you don't want to re-create the delta")
+	#TODO: implement
 	#-n / --no-host-reports
-	parser.add_option("-n", "--no-host-reports", action="store_true", default=False, dest="noHostReports", help="only create delta CSV report and skip creating host reports")
+	repOpts.add_option("-n", "--no-host-reports", action="store_true", default=False, dest="noHostReports", help="only create delta CSV report and skip creating host reports (default: no)")
 	#-x / --preserve-tex
-	parser.add_option("-x", "--preserve-tex", action="store_true", default=False, dest="preserveTex", help="keeps the TeX files after creating the PDF reports (default: no)")
+	repOpts.add_option("-x", "--preserve-tex", action="store_true", default=False, dest="preserveTex", help="keeps the TeX files after creating the PDF reports (default: no)")
 	#-p / --page-orientation
-	parser.add_option("-p", "--page-orientation", action="store", type="choice", dest="pageOrientation", default="landscape", metavar="[landscape|potrait]", choices=["landscape","potrait"], help="defines the orientation of the PDF report (default: landscape)")
+	repOpts.add_option("-p", "--page-orientation", action="store", type="choice", dest="pageOrientation", default="landscape", metavar="[landscape|potrait]", choices=["landscape","potrait"], help="defines the orientation of the PDF report (default: landscape)")
 	#-i / --image
-	parser.add_option("-i", "--image", action="store", type="string", dest="logoImage", metavar="FILE", help="defines a different company logo")
+	repOpts.add_option("-i", "--image", action="store", type="string", dest="logoImage", metavar="FILE", help="defines a different company logo")
 	#-c / --csv
-	#parser.add_option("-c", "--csv", action="store", type="string", dest="csvReport", metavar="FILE", help="uses a pre-existing CSV delta report")
+	#repOpts.add_option("-c", "--csv", action="store", type="string", dest="csvReport", metavar="FILE", help="uses a pre-existing CSV delta report")
 	#TODO: implement
 	#-f / --footer
-	parser.add_option("-f", "--footer", action="store", type="string", default="", dest="footer", metavar="STRING", help="changes footer text")
-	#-b / --pdflatex-binary
-	parser.add_option("-b", "--pdflatex-binary", action="store", type="string", dest="pathPdflatex", default="/usr/bin/pdflatex", metavar="PATH", help="location for the pdflatex binary")
+	repOpts.add_option("-f", "--footer", action="store", type="string", default="", dest="footer", metavar="STRING", help="changes footer text")
+	#-V / --verification-log
+	repOpts.add_option("-V", "--verification-log", action="store", default="", dest="verificationLog", metavar="FILE", help="alternate location for verification log (default: $lastSnapshot.vlog)")
 	
-        #parse arguments
+        #parse and return arguments
         (options, args) = parser.parse_args()
+	return (options, args)
+
+
+
+def main(options):
 	
 	#define folder of this script
 	thisFolder = os.path.dirname(os.path.realpath(__file__))
@@ -76,17 +99,17 @@ if __name__ == "__main__":
 		options.footer = 'This report was automatically generated by \\textbf{satprep} - \href{https://github.com/stdevel/satprep}{https://github.com/stdevel/satprep}'
 	#set default logo if none specified or not readable
 	if options.logoImage is None or not os.access(os.path.dirname(options.logoImage), os.R_OK):
-		if options.logoImage: print "ERROR: given logo image (" + str(options.logoImage) + ") not readable, using default logo (" + thisFolder + "/default_logo.jpg" + ")"
-		if options.debug: print "DEBUG image logo changed to: " + thisFolder + "/default_logo.jpg"
+		if options.logoImage: LOGGER.error("given logo image (" + str(options.logoImage) + ") not readable, using default logo (" + thisFolder + "/default_logo.jpg" + ")")
+		if options.debug: LOGGER.debug("DEBUG image logo changed to: " + thisFolder + "/default_logo.jpg")
 		options.logoImage = thisFolder + "/default_logo.jpg"
 	
 	#print arguments
-	if options.debug: print "DEBUG: options:"+str(options)+"\nDEBUG: args: "+str(args)
+	if options.debug: LOGGER.debug("options:"+str(options)+"\nDEBUG: args: "+str(args))
 	
 	#check whether two arguments containing (the report files) are given
 	#TODO: check if delta report specified with -c / --csv
 	if len(args) != 2:
-		print "ERROR: you need to specify two files (snapshot reports!)"
+		LOGGER.error("You need to specify two files (snapshot reports!)")
 		exit(1)
 	
 	#check whether report lines are compatible
@@ -94,7 +117,7 @@ if __name__ == "__main__":
 	header = file1.readline()
 	file2 = open(args[1], 'r')
 	if header == file2.readline():
-		if options.debug: print "DEBUG: report headers are compatible!"
+		if options.debug: LOGGER.debug("report headers are compatible!")
 		file1.seek(0)
 		file2.seek(0)
 		#setup field indexes
@@ -107,48 +130,70 @@ if __name__ == "__main__":
 			except ValueError:
 				if options.debug: "DEBUG: unable to find column index for " + name + " so I'm disabling it."
 		#print report column indexes
-		if options.debug: print "DEBUG: report column indexes: " + str(repcols)
+		if options.debug: LOGGER.debug("Report column indexes: " + str(repcols))
 	else:
-		print "ERROR: your reports are incompatible as they have different columns!"
+		LOGGER.debug("Your reports are incompatible as they have different columns!")
 		exit(1)
 	
 	#check whether the pdflatex exists
 	if not os.access(options.pathPdflatex, os.X_OK):
-		print "ERROR: pdflatex binary (" + options.pathPdflatex + ") not existent or executable!"
+		LOGGER.error("pdflatex binary (" + options.pathPdflatex + ") not existent or executable!")
 		exit(1)
 	
 	#check whether the template exists
 	if os.path.isfile(thisFolder+"/"+options.template+".tex"):
-		if options.debug: print "DEBUG: template exists!"
+		if options.debug: LOGGER.debug("Template exists!")
 		
 		#check whether target is writable
 		if os.access(os.path.dirname(options.output), os.W_OK) or os.access(os.getcwd(), os.W_OK):
-                        if options.debug: print "DEBUG: path exists and writable"
+                        if options.debug: LOGGER.debug("Path exists and writable")
 			
 			#read reports and create delta
 			if os.path.getctime(args[0]) < os.path.getctime(args[1]):
 				#file1 is bigger
-				if options.verbose: print "INFO: assuming file1 ('"+args[0]+"') is the first snapshot."
+				LOGGER.info("Assuming file1 ('"+args[0]+"') is the first snapshot.")
 				f1 = file1.readlines()
 				f2 = file2.readlines()
 				f1.sort()
 				f2.sort()
 				diff = difflib.ndiff(f1, f2)
 				this_date = datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y-%m-%d')
+				#set vlog
+				if options.verificationLog == "":
+					if os.access(datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y%m%d')+"_satprep.vlog", os.W_OK):
+						options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y%m%d')+"_satprep.vlog"
+				elif os.access(options.verificationLog, os.W_OK) != True:
+					if os.access(datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y%m%d')+"_satprep.vlog", os.W_OK):
+						options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y%m%d')+"_satprep.vlog"
+					else: options.verificationLog = ""
+				if options.verificationLog != "": LOGGER.info(options.verificationLog + " seems to be our verification log")
+				else: LOGGER.info("Snapshot and monitoring checkboxes won't be pre-selected as we don't have a valid .vlog!")
 			else:
 				#file2 is bigger
-				if options.verbose: print "INFO: assuming file2 ('"+args[1]+"') is the first snapshot."
+				LOGGER.info("Assuming file2 ('"+args[1]+"') is the first snapshot.")
 				f1 = file1.readlines()
                                 f2 = file2.readlines()
                                 f1.sort()
                                 f2.sort()
 				diff = difflib.ndiff(f1, f2)
 				this_date = datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y-%m-%d')
+				#set vlog
+				if options.verificationLog == "":
+					if os.access(datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog", os.W_OK):
+						options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog"
+				elif os.access(options.verificationLog, os.W_OK) != True:
+					if os.access(datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog", os.W_OK):
+						options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog"
+					else: options.verificationLog = ""
+				if options.verificationLog != "": LOGGER.info(options.verificationLog + " seems to be our verification log")
+				else: LOGGER.info("Snapshot and monitoring checkboxes won't be pre-selected as we don't have a valid .vlog!")
+			
+			#create delta
 			delta = ''.join(x[2:] for x in diff if x.startswith('- '))
 			delta = "".join([s for s in delta.strip().splitlines(True) if s.strip("\r\n").strip()])
 			
 			#print delta
-			if options.debug: print "DEBUG: delta is:\n"+delta
+			if options.debug: LOGGER.debug("Delta is:\n"+delta)
 			
 			#create diff CSV report
 			f = open( options.output+'.csv', 'w' )
@@ -159,7 +204,7 @@ if __name__ == "__main__":
 			
 			#stop here if user doesn't want any fancy host reports
 			if options.noHostReports:
-				if options.verbose: print "INFO: creation of host reports skipped as you don't want any fancy reports."
+				LOGGER.info("Creation of host reports skipped as you don't want any fancy reports.")
 				exit(1)
 			
 			#create _all_ the PDF reports
@@ -174,7 +219,7 @@ if __name__ == "__main__":
 			
 			#read CSV as array
 			a = []
-			if options.debug: print "Opening file '" + options.output+'.csv' + "'"
+			if options.debug: LOGGER.debug("Opening file '" + options.output+'.csv' + "'")
 			csvReader = csv.reader(open(thisFolder+"/"+options.output+'.csv', 'r'), delimiter=';');
 			for row in csvReader:
 				a.append(row);
@@ -243,7 +288,7 @@ if __name__ == "__main__":
 				for line in a:
 						#check if the current line is host-relevant
 						if line[0] == host:
-							if options.debug: print "DEBUG: found relevant line for " + host + ": " + str(line)
+							if options.debug: LOGGER.debug("Found relevant line for " + host + ": " + str(line))
 							#define IP address if present in report
 							if repcols["ip"] < 666:
 								this_ip = line[repcols["ip"]]
@@ -283,6 +328,7 @@ if __name__ == "__main__":
 							else:
 								this_monitoringNo = "$\Box$"
 								this_monitoringNoNotes = ""
+								#TODO: set box/comment if downtime scheduled
 							
                                                         #set system backup bit if specified and present in report
                                                         if repcols["system_backup"] < 666 and line[repcols["system_backup"]] == "0":
@@ -315,6 +361,7 @@ if __name__ == "__main__":
 								this_vmSnapNo = "$\Box$"
 								this_hwCheckNotes = "not a physical host"
 								this_vmSnapNotes = ""
+								#TODO: set box/comment if snapshot created
                                                         else:  
 								#set boxes and notes
 								this_hwCheckNo = "$\Box$"
@@ -387,14 +434,28 @@ if __name__ == "__main__":
 					os.system(options.pathPdflatex + " %s %s 1>/dev/null" % ("--interaction=batchmode",  host.replace(" ","") + ".tex"))
 					#remove .tex/.aux/.log file
 					if options.preserveTex == False:
-						if options.debug: print "DEBUG: removing "+host+".[tex|aux|log|out] files"
+						if options.debug: LOGGER.debug("Removing "+host+".[tex|aux|log|out] files")
 						os.remove(host.replace(" ","") + ".tex")
 						os.remove(host.replace(" ","") + ".aux")
 						os.remove(host.replace(" ","") + ".log")
 						os.remove(host.replace(" ","") + ".out")
 		else:   
 			#path not writable or existent
-			print >> sys.stderr, "ERROR: path non-existent or non-writable!"
+			LOGGER.error("Path non-existent or non-writable!")
 	else:
 		#template not existent
-		print >> sys.stderr,  "ERROR: LaTeX template file ("+thisFolder+"/"+options.template+".[tpl|tex]) non-existent!"
+		LOGGER.error("LaTeX template file ("+thisFolder+"/"+options.template+".[tpl|tex]) non-existent!")
+
+
+
+if __name__ == "__main__":
+	(options, args) = parse_options()
+	
+	if options.debug:
+		logging.basicConfig(level=logging.DEBUG)
+		LOGGER.setLevel(logging.DEBUG)
+	else:
+		logging.basicConfig()
+		LOGGER.setLevel(logging.INFO)
+	
+	main(options)

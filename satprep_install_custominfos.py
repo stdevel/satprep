@@ -14,9 +14,12 @@ import logging
 import pprint
 import sys
 import xmlrpclib
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 from satprep_shared import check_if_api_is_supported, get_credentials
 
+
+
+#key definitions
 CUSTOM_KEYS = {
         "SYSTEM_OWNER": "Defines the system's owner - this is needed for creating automated maintenance reports",
         "SYSTEM_MONITORING": "Defines whether the system is monitored",
@@ -35,8 +38,10 @@ CUSTOM_KEYS = {
 	"SYSTEM_VIRT_SNAPSHOT": "Defines whether the system should be protected by a snapshot",
 	"SYSTEM_VIRT_VMNAME": "Defines an alternative VM object name"
 }
-
+#define logger
 LOGGER = logging.getLogger('satprep_install_custominfos')
+
+
 
 def main(options):
         LOGGER.debug("Options: {0}".format(options))
@@ -61,6 +66,7 @@ def main(options):
                 remove_custom_keys(client, key)
         else:
                 create_custom_keys(client, key, force_creation=options.force)
+
 
 
 def create_custom_keys(client, session_key, force_creation=False):
@@ -106,24 +112,34 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 
         Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
         parser = OptionParser(description=desc, version="%prog version 0.3")
-	#-a / --authfile
-        parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
-	#-s / --server
-        parser.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use")
+	#define option groups
+	genOpts = OptionGroup(parser, "Generic Options")
+	srvOpts = OptionGroup(parser, "Server Options")
+	parser.add_option_group(genOpts)
+	parser.add_option_group(srvOpts)
+	
+	#GENERIC OPTIONS
 	#-q / --quiet
-        parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")
+	genOpts.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout (default: no)")
 	#-d / --debug
-        parser.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs")
+	genOpts.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs (default: no)")
+	
+	#SERVER OPTIONS
+	#-a / --authfile
+	srvOpts.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
+	#-s / --server
+	srvOpts.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use")
 	#-n / --dry-run
-        parser.add_option("-n", "--dry-run", action="store_true", dest="dryrun", default=False, help="only simulates the creation of custom keys")
+	srvOpts.add_option("-n", "--dry-run", action="store_true", dest="dryrun", default=False, help="only simulates the creation of custom keys (default: no)")
 	#-f / --force
-        parser.add_option("-f", "--force", action="store_true", dest="force", default=False, help="overwrites previously created custom keys with the same name")
+	srvOpts.add_option("-f", "--force", action="store_true", dest="force", default=False, help="overwrites previously created custom keys with the same name (default: no)")
 	#-u / --uninstall
-        parser.add_option("-u", "--uninstall", action="store_true", dest="uninstall", default=False, help="removes previously installed custom info keys")
+	srvOpts.add_option("-u", "--uninstall", action="store_true", dest="uninstall", default=False, help="removes previously installed custom info keys (default: no)")
 
         (options, args) = parser.parse_args(args)
 
         return (options, args)
+
 
 
 def remove_custom_keys(client, session_key):
@@ -137,6 +153,7 @@ def remove_custom_keys(client, session_key):
                         LOGGER.info("INFO: successfully removed information key '{0}'".format(key))
                 else:
                         LOGGER.warning("INFO: unable to remove key '{0}': check your account permissions!".format(key))
+
 
 
 if __name__ == "__main__":

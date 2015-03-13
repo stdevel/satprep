@@ -16,11 +16,12 @@ import os
 import sys
 import time
 import xmlrpclib
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 from satprep_shared import check_if_api_is_supported, get_credentials
 
-#TODO: string + " " + string ==>  string,string
-#TODO: escaping ==> r'\tbla}t'
+
+
+#define fields, previously it was possible to define custom fields
 POSSIBLE_FIELDS = ["hostname", "ip", "errata_name", "errata_type",
 	 "errata_desc", "errata_date", "errata_reboot", "system_owner",
 	 "system_cluster", "system_virt", "system_virt_snapshot", "system_virt_vmname",
@@ -29,6 +30,7 @@ POSSIBLE_FIELDS = ["hostname", "ip", "errata_name", "errata_type",
  ]
 DEFAULT_FIELDS = POSSIBLE_FIELDS
 LOGGER = logging.getLogger('satprep-snapshot')
+
 
 
 def parse_options(args=None):
@@ -45,23 +47,35 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 
 Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 	parser = OptionParser(description=desc, version="%prog version 0.3")
+	#define option groups
+	genOpts = OptionGroup(parser, "Generic Options")
+	parser.add_option_group(genOpts)
+	srvOpts = OptionGroup(parser, "Server Options")
+	parser.add_option_group(srvOpts)
+	snapOpts = OptionGroup(parser, "Snapshot Options")
+	parser.add_option_group(snapOpts)
 	
-	#-a / --authfile
-	parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
-	#-s / --server
-	parser.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use")
+	#GENERIC OPTIONS
 	#-q / --quiet
-	parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")
+	genOpts.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout (default: no)")
 	#-d / --debug
-	parser.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs")
-	#-o / --output
-	parser.add_option("-o", "--output", action="store", type="string", dest="output", default="foobar", metavar="FILE", help=("define CSV report filename. (default: " "errata-snapshot-report-RHNhostname-Ymd.csv)"))
-	#-f / --field
-	parser.add_option("-f", "--field", action="append", type="choice", dest="fields", choices=POSSIBLE_FIELDS, metavar="FIELDS", help="defines which fields should be integrated in the report")
-	#-p / --include-patches
-	parser.add_option("-p", "--include-patches", action="store_true", default=False, dest="includePatches", help=("defines whether package updates that are not part of an erratum shall be included"))
+	genOpts.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs (default: no)")
+	
+	#SERVER OPTIONS
+	#-a / --authfile
+	srvOpts.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
+	#-s / --server
+	srvOpts.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use (default: localhost)")
 	#-r / --reconnect-threshold
-	parser.add_option("-r", "--reconnect-threshold", action="store", type="int", default=5, dest="reconnectThreshold", metavar="THRESHOLD", help=("defines after how many host scans a re-login should be done (XMLRPC API timeout workaround)"))
+	srvOpts.add_option("-r", "--reconnect-threshold", action="store", type="int", default=5, dest="reconnectThreshold", metavar="THRESHOLD", help="defines after how many host scans a re-login should be done (XMLRPC API timeout workaround, default: 5)")
+	
+	#SNAPSHOT OPTIONS
+	#-o / --output
+	snapOpts.add_option("-o", "--output", action="store", type="string", dest="output", default="foobar", metavar="FILE", help=("define CSV report filename. (default: " "errata-snapshot-report-RHNhostname-Ymd.csv)"))
+	#-f / --field
+	#snapOpts.add_option("-f", "--field", action="append", type="choice", dest="fields", choices=POSSIBLE_FIELDS, metavar="FIELDS", help="defines which fields should be integrated in the report (default: all available)")
+	#-p / --include-patches
+	snapOpts.add_option("-p", "--include-patches", action="store_true", default=False, dest="includePatches", help="defines whether package updates that are not part of an erratum shall be included (default: no)")
 
 	(options, args) = parser.parse_args(args)
 
@@ -71,13 +85,14 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 			time=time.strftime("%Y%m%d-%H%M")
 		)
 
-	if options.fields is None:
-		options.fields = DEFAULT_FIELDS
+	#if options.fields is None:
+	#	options.fields = DEFAULT_FIELDS
 
 	LOGGER.debug("Options: {0}".format(options))
 	LOGGER.debug("Arguments: {0}".format(args))
 	
 	return (options, args)
+
 
 
 def main(options):
@@ -98,7 +113,8 @@ def main(options):
 		writer = csv.writer(open(options.output, "w"), 'default')
 
 		#create header and scan _all_ the systems
-		writer.writerow(options.fields)
+		#writer.writerow(options.fields)
+		writer.writerow(DEFAULT_FIELDS)
 		systems = client.system.listSystems(key)
 		#counter variable for XMLRPC timeout workaround (https://github.com/stdevel/satprep/issues/5)
 		hostCounter = 0
@@ -124,15 +140,17 @@ def main(options):
 	client.auth.logout(key)
 
 
+
 def process_system(client, key, writer, system):
 	LOGGER.info("found host {0[name]} (SID {0[id]})".format(system))
-	process_erratas(client, key, writer, system)
+	process_errata(client, key, writer, system)
 
 	if options.includePatches:
 		process_patches(client, key, writer, system)
 
 
-def process_erratas(client, key, writer, system):
+
+def process_errata(client, key, writer, system):
 	columnErrataMapping = {
 		"hostname": "name",
 		"errata_name": "advisory_name",
@@ -157,7 +175,7 @@ def process_erratas(client, key, writer, system):
 		)
 
 		valueSet = []
-		for column in options.fields:
+		for column in DEFAULT_FIELDS:
 			try:
 				valueSet.append(system[columnErrataMapping[column]])
 				LOGGER.info("Translated column '" + column + "' in '" + columnErrataMapping[column] + "'") 
@@ -289,6 +307,7 @@ def process_erratas(client, key, writer, system):
 		writer.writerow(valueSet)
 
 
+
 def process_patches(client, key, writer, system):
 	updates = client.system.listLatestUpgradablePackages(key, system["id"])
 
@@ -315,7 +334,8 @@ def process_patches(client, key, writer, system):
 			continue
 
 		valueSet = []
-		for column in options.fields:
+		#for column in options.fields:
+		for column in DEFAULT_FIELDS:
 			if column == "hostname":
 				valueSet.append(system["name"])
 			elif column == "ip":
@@ -416,6 +436,7 @@ def process_patches(client, key, writer, system):
 
 		if valueSet:
 			writer.writerow(valueSet)
+
 
 
 if __name__ == "__main__":
