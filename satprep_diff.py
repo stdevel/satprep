@@ -23,10 +23,10 @@ import datetime
 
 #define logger
 LOGGER = logging.getLogger('satprep_diff')
+vlogInvalid=False
 
 #TODO: delete original snapshots after creating delta option
 #TODO: use pre-existing delta CSV instead of creating one (e.g. for testing purposes)
-#TODO: implement support of verification logs to include snapshot and downtime creation; input done - mention in report
 
 
 
@@ -86,6 +86,7 @@ def parse_options(args=None):
 
 
 def main(options):
+	global vlogInvalid
 	
 	#define folder of this script
 	thisFolder = os.path.dirname(os.path.realpath(__file__))
@@ -123,7 +124,7 @@ def main(options):
 		#setup field indexes
 		headers = header.replace("\n","").replace("\r","").split(";")
 		#print header
-		repcols = { "hostname" : 666, "ip" : 666, "errata_name" : 666, "errata_type" : 666, "errata_desc" : 666, "errata_date" : 666, "system_owner" : 666, "system_cluster" : 666, "system_virt" : 666, "errata_reboot" : 666, "system_monitoring" : 666, "system_monitoring_notes" : 666, "system_backup" : 666, "system_backup_notes" : 666, "system_antivir" : 666, "system_antivir_notes" : 666 }
+		repcols = { "hostname" : 666, "ip" : 666, "errata_name" : 666, "errata_type" : 666, "errata_desc" : 666, "errata_date" : 666, "system_owner" : 666, "system_cluster" : 666, "system_virt" : 666, "system_virt_vmname" : 666, "errata_reboot" : 666, "system_monitoring" : 666, "system_monitoring_notes" : 666, "system_monitoring_name" : 666, "system_backup" : 666, "system_backup_notes" : 666, "system_antivir" : 666, "system_antivir_notes" : 666 }
 		for name,value in repcols.items():
 			try:
 				repcols[name] = headers.index(name)
@@ -186,7 +187,16 @@ def main(options):
 						options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog"
 					else: options.verificationLog = ""
 				if options.verificationLog != "": LOGGER.info(options.verificationLog + " seems to be our verification log")
-				else: LOGGER.info("Snapshot and monitoring checkboxes won't be pre-selected as we don't have a valid .vlog!")
+				else:
+					LOGGER.info("Snapshot and monitoring checkboxes won't be pre-selected as we don't have a valid .vlog!")
+					vlogInvalid=True
+			
+			#read vlog
+			if vlogInvalid == False:
+				f_log = open(options.verificationLog, 'r')
+				vlog = f_log.read()
+				LOGGER.debug("vlog is:\n" + vlog)
+			else: vlog=""
 			
 			#create delta
 			delta = ''.join(x[2:] for x in diff if x.startswith('- '))
@@ -319,16 +329,26 @@ def main(options):
 							
 							#set system monitoring bit if specified and present in report
 							if repcols["system_monitoring"] < 666 and line[repcols["system_monitoring"]] == "0":
-								#monitoring disabled, add notes if available
-                                                                this_monitoringNo = "$\CheckedBox$"
-								if repcols["system_monitoring_notes"] < 666 and len(line[repcols["system_monitoring_notes"]]) > 1:
-                                                                	this_monitoringNoNotes = line[repcols["system_monitoring_notes"]]
-								else:
-									this_monitoringNoNotes = ""
+								#no monitoring, add notes if available
+                                                                this_monSchedNo = "$\CheckedBox$"
 							else:
-								this_monitoringNo = "$\Box$"
-								this_monitoringNoNotes = ""
-								#TODO: set box/comment if downtime scheduled
+								#set box/comment if downtime scheduled
+								if repcols["system_monitoring_name"] < 666 and line[repcols["system_monitoring_name"]] != "":
+									tempHost = line[repcols["system_monitoring_name"]]
+									if "@" in tempHost: tempHost = tempHost[:tempHost.find("@")]
+								else: tempHost = host
+								if "MONOK;"+host in vlog:
+									LOGGER.debug("MONOK;"+tempHost + " in vlog!")
+									this_monYes = "$\CheckedBox$"
+									this_monNo = "$\Box$"
+								else:
+									LOGGER.debug("MONOK;"+tempHost + " NOT in vlog!")
+									this_monYes = "$\Box$"
+									if vlogInvalid == False: this_monNo = "$\CheckedBox$"
+									else: this_monNo = "$\Box$"
+							if repcols["system_monitoring_notes"] < 666 and len(line[repcols["system_monitoring_notes"]]) > 1:
+                                                               	this_monNotes = line[repcols["system_monitoring_notes"]]
+							else: this_monNotes = ""
 							
                                                         #set system backup bit if specified and present in report
                                                         if repcols["system_backup"] < 666 and line[repcols["system_backup"]] == "0":
@@ -358,10 +378,21 @@ def main(options):
                                                         if repcols["system_virt"] < 666 and line[repcols["system_virt"]] == "1":
 								#set boxes and notes
                                                                 this_hwCheckNo = "$\CheckedBox$"
-								this_vmSnapNo = "$\Box$"
 								this_hwCheckNotes = "not a physical host"
 								this_vmSnapNotes = ""
-								#TODO: set box/comment if snapshot created
+								#set box/comment if snapshot created
+								if repcols["system_virt_vmname"] < 666 and line[repcols["system_virt_vmname"]] != "":
+									tempHost = line[repcols["system_virt_vmname"]]
+									if "@" in tempHost: tempHost = tempHost[:tempHost.find("@")]
+								else: tempHost = host
+								if "SNAPOK;"+tempHost in vlog:
+									LOGGER.debug("SNAPOK;"+tempHost + " in vlog!")
+									this_vmSnapYes = "$\CheckedBox$"
+									this_vmSnapNo = "$\Box$"
+								else:
+									LOGGER.debug("SNAPOK;"+tempHost + " NOT in vlog!")
+									this_vmSnapYes = "$\Box$"
+									if vlogInvalid == False: this_vmSnapNo = "$\CheckedBox$"
                                                         else:  
 								#set boxes and notes
 								this_hwCheckNo = "$\Box$"
@@ -428,7 +459,7 @@ def main(options):
 				with open (host.replace(" ","") + ".tex", "w") as letter:
 					s = LaTeXTemplate(data)
 					#Substitute template variables
-					letter.write(s.substitute(titleHostname=host, ip=this_ip, date=this_date, owner=this_owner, systemStandalone=this_standalone, systemCluster=this_cluster, hintsClusterTest=hintsClTest, hwCheckNo=this_hwCheckNo, hwCheckNotes=this_hwCheckNotes, vmSnapNo=this_vmSnapNo, vmSnapNotes=this_vmSnapNotes, rebootNo=this_NoReboot, rebootNotes=this_RebootNotes, errata=this_errataTable, orientation=options.pageOrientation+",", footer=options.footer, logo=options.logoImage, MonitoringNo=this_monitoringNo, MonitoringNoNotes=this_monitoringNoNotes, BackupNo=this_backupNo, BackupNoNotes=this_backupNoNotes, AntivirNo=this_antivirNo, AntivirNoNotes=this_antivirNoNotes))
+					letter.write(s.substitute(titleHostname=host, ip=this_ip, date=this_date, owner=this_owner, systemStandalone=this_standalone, systemCluster=this_cluster, hintsClusterTest=hintsClTest, hwCheckNo=this_hwCheckNo, hwCheckNotes=this_hwCheckNotes, vmSnapYes=this_vmSnapYes, vmSnapNo=this_vmSnapNo, vmSnapNotes=this_vmSnapNotes, rebootNo=this_NoReboot, rebootNotes=this_RebootNotes, errata=this_errataTable, orientation=options.pageOrientation+",", footer=options.footer, logo=options.logoImage, monSchedYes=this_monYes, monSchedNo=this_monNo, monSchedNotes=this_monNotes, BackupNo=this_backupNo, BackupNoNotes=this_backupNoNotes, AntivirNo=this_antivirNo, AntivirNoNotes=this_antivirNoNotes))
 					letter.close();
 					#render PDF files
 					os.system(options.pathPdflatex + " %s %s 1>/dev/null" % ("--interaction=batchmode",  host.replace(" ","") + ".tex"))

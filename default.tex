@@ -10,7 +10,9 @@
 \usepackage{tabularx}
 \usepackage{colortbl}
 \usepackage{array}
-\usepackage{hyperref}
+\usepackage[pdfborder={0 0 0}]{hyperref}
+% a more modern way would be:
+% \usepackage[hidelinks]{hyperref}
 \usepackage{graphicx} 
 
 \setlength\extrarowheight{2pt}
@@ -47,7 +49,6 @@
 \hline
 \multicolumn{8}{|c|}{\cellcolor{Gray}\textbf{Meta information and planned tasks}} \\
 \hline
-%Standalone system & $\Box$ & Cluster system & $\Box$ & Update operating system & $\CheckedBox$ & Update application & $\Box$ \\
 Standalone system & %%systemStandalone & Cluster system & %%systemCluster & Update operating system & $\CheckedBox$ & Update application & $\Box$ \\
 \hline
 Hardware change & $\Box$ & Other tasks (please specify) & \multicolumn{5}{l|}{} \\
@@ -68,8 +69,8 @@ Hardware change & $\Box$ & Other tasks (please specify) & \multicolumn{5}{l|}{} 
 \cline{2-4}
 \hline
 Hardware check & $\Box$ & %%hwCheckNo & %%hwCheckNotes \\
-Snapshot of virtual machine created & $\Box$ & %%vmSnapNo & %%vmSnapNotes \\
-Monitoring disabled & $\Box$ & $\Box$ & \\
+Snapshot of virtual machine created & %%vmSnapYes & %%vmSnapNo & %%vmSnapNotes \\
+Monitoring disabled & %%monSchedYes & %%monSchedNo & %%monSchedNotes \\
 Tasks (see above) realised & $\Box$ & $\Box$ & \\
 System rebooted & $\Box$ & %%rebootNo & %%rebootNotes \\
 Application up and running & $\Box$ & $\Box$ & \\

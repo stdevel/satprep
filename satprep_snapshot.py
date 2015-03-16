@@ -106,7 +106,7 @@ def main(options):
 
 	#check whether the output directory/file is writable
 	if os.access(os.path.dirname(options.output), os.W_OK) or os.access(os.getcwd(), os.W_OK):
-		LOGGER.info("output file/directory writable!")
+		LOGGER.debug("output file/directory writable!")
 
 		#create CSV report, open file
 		csv.register_dialect("default", delimiter=";", quoting=csv.QUOTE_NONE)
@@ -124,7 +124,7 @@ def main(options):
 			#increase counter and re-login if necessary
 			if hostCounter == (options.reconnectThreshold-1):
 				#re-login
-				LOGGER.info("Re-login due to XMLRPC timeout workaround!")
+				LOGGER.debug("Re-login due to XMLRPC timeout workaround!")
 				client.auth.logout(key)
 				key = client.auth.login(username, password)
 				hostCounter = 0
@@ -142,7 +142,7 @@ def main(options):
 
 
 def process_system(client, key, writer, system):
-	LOGGER.info("found host {0[name]} (SID {0[id]})".format(system))
+	LOGGER.debug("found host {0[name]} (SID {0[id]})".format(system))
 	process_errata(client, key, writer, system)
 
 	if options.includePatches:
@@ -163,7 +163,7 @@ def process_errata(client, key, writer, system):
 	
 	errata = client.system.getRelevantErrata(key, system["id"])
 	if not errata:
-		LOGGER.debug("host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
+		LOGGER.info("host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
 		return
 
 	for i, erratum in enumerate(errata, start=1):
@@ -178,11 +178,11 @@ def process_errata(client, key, writer, system):
 		for column in DEFAULT_FIELDS:
 			try:
 				valueSet.append(system[columnErrataMapping[column]])
-				LOGGER.info("Translated column '" + column + "' in '" + columnErrataMapping[column] + "'") 
+				LOGGER.debug("Translated column '" + column + "' in '" + columnErrataMapping[column] + "'") 
 				continue
 			except KeyError:
 				# Key not found - probably needs more logic.
-				LOGGER.info("Could not find column '" + column + "' in columnErrataMapping")
+				LOGGER.debug("Could not find column '" + column + "' in columnErrataMapping")
 				pass
 			
 			if column == "ip":
@@ -447,6 +447,6 @@ if __name__ == "__main__":
 		LOGGER.setLevel(logging.DEBUG)
 	else:
 		logging.basicConfig()
-		LOGGER.setLevel(logging.WARNING)
+		LOGGER.setLevel(logging.INFO)
 
 	main(options)
