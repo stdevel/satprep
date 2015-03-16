@@ -51,6 +51,7 @@ The toolkit consists of four scripts:
 
 
 Make sure to follow this procedure to document your maintenance tasks:
+
 1. do a complete patch/errata inventory of your landscape: `./satprep_snapshot.py`
 2. notice that a CSV report was created: `errata-snapshot-report-$RHNhostname-YYYYMMDD-HHMM.csv`
 3. prepare maintenance; automatically create VMware snapshots and monitoring downtimes and verify them: `./satprep_prepare_maintenance.py snapshot.csv ; ./satprep_prepary_maintenance.py -V snapshot.csv` (*optional*)
@@ -74,9 +75,9 @@ Requirements
 ============
 **satprep** needs Python 2.6 or newer - it runs on EL5/6 machines without adding additional software repositories.
 The following additional Python modules are used:
-* libvirt
-* xmlrpclic (*shipped with `rhnlib`*)
-* requests
+* `libvirt`
+* `xmlrpclic` (*shipped with `rhnlib`*)
+* `requests`
 
 The toolkit needs the `pdflatex` binary which is usually part of the LaTeX or TeX Live software set provided by your distributor.
 
