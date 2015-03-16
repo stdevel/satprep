@@ -54,7 +54,7 @@ Make sure to follow this procedure to document your maintenance tasks:
 
 1. do a complete patch/errata inventory of your landscape: `./satprep_snapshot.py`
 2. notice that a CSV report was created: `errata-snapshot-report-$RHNhostname-YYYYMMDD-HHMM.csv`
-3. prepare maintenance; automatically create VMware snapshots and monitoring downtimes and verify them: `./satprep_prepare_maintenance.py snapshot.csv ; ./satprep_prepary_maintenance.py -V snapshot.csv` (*optional*)
+3. prepare maintenance; automatically create VMware snapshots and monitoring downtimes and verify them: `./satprep_prepare_maintenance.py snapshot.csv ; ./satprep_prepare_maintenance.py -V snapshot.csv` (*optional*)
 4. complete your system maintenance tasks (*patch and reboot systems, etc.*)
 5. do another complete patch/errata inventory: `./satprep_snapshot.py`
 6. create a difference report and host reports: `./satprep_diff.py *.csv`
@@ -101,7 +101,7 @@ Prepare maintenance for affected hosts (*optional*):
 ```
 $ ./satprep_prepare_maintenance.py errata-snapshot*.csv
 ...
-$ ./satprep_prepary_maintenance.py -V errata-snapshot*.csv
+$ ./satprep_prepare_maintenance.py -V errata-snapshot*.csv
 ```
 Patch your systems, reboot them, verify functionality, etc.:
 
