@@ -72,35 +72,15 @@ See the [wiki](https://github.com/stdevel/satprep/wiki) for more details about t
 
 Requirements
 ============
-**satprep** needs Python 2.6 or newer - it runs on EL5/6 machines without adding additional software repositories (*that's by the way one reason why I had chosen optparse instead of argparse*).
-The following Python modules are used:
-* libvirt (*you might need to install this, e.g. under EL: ``yum install -y libvirt-python``*)
-* optparse
-* sys
-* os
-* stat
-* difflib
-* time
-* csv
-* string
-* datetime
-* time
-* getpass
+**satprep** needs Python 2.6 or newer - it runs on EL5/6 machines without adding additional software repositories.
+The following additional Python modules are used:
+* libvirt
 * xmlrpclic (*shipped with `rhnlib`*)
-* pprint
-* logging
-* requests (*you might need to install this, e.g. under EL: ``yum install -y python-requests``*)
+* requests
 
-The toolkit needs the `pdflatex` binary which is usually part of the LaTeX or TeX Live software set provided by your distributor (*for EL you’ll need the `texlive-latex`package*). You need to install one of both.
-The template which is used by **satprep** uses the following LaTeX modules:
-* wasysym
-* tabularx
-* colortbl
-* array
-* hyper
-* graphicx
+The toolkit needs the `pdflatex` binary which is usually part of the LaTeX or TeX Live software set provided by your distributor.
 
-Usually these modules should already be part of your LaTeX or TeX Live distribution.
+Check out the [wiki](https://github.com/stdevel/satprep/wiki/install#requirements) for more detail information.
 
 
 
