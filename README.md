@@ -23,7 +23,7 @@ As this toolkit uses the Python bindings of [libvirt](http://www.libvirt.org) a 
 - Xen
 - VMware vSphere ESXi
 - Microsoft Hyper-V
-- ...and many more
+- ...[and many more](http://libvirt.org/drivers.html)
 
 
 
