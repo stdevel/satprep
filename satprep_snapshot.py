@@ -5,7 +5,7 @@
 # report of available errata available to systems managed
 # with Spacewalk, Red Hat Satellite or SUSE Manager.
 #
-# 2014 By Christian Stankowic
+# 2015 By Christian Stankowic
 # <info at stankowic hyphen development dot net>
 # https://github.com/stdevel
 #
@@ -16,24 +16,21 @@ import os
 import sys
 import time
 import xmlrpclib
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 from satprep_shared import check_if_api_is_supported, get_credentials
 
-#TODO: string + " " + string ==>  string,string
-#TODO: escaping ==> r'\tbla}t'
-DEFAULT_FIELDS = ["hostname", "ip", "errata_name", "errata_type",
-	 "errata_desc", "errata_date", "errata_reboot", "system_owner",
-	 "system_cluster", "system_virt", "system_monitoring",
-	 "system_monitoring_notes", "system_backup", "system_backup_notes",
-	 "system_antivir", "system_antivir_notes"
- ]
+
+
+#define fields, previously it was possible to define custom fields
 POSSIBLE_FIELDS = ["hostname", "ip", "errata_name", "errata_type",
-	"errata_desc", "errata_date", "errata_reboot", "system_owner",
-	"system_cluster", "system_virt", "system_monitoring",
-	"system_monitoring_notes", "system_backup", "system_backup_notes",
-	"system_antivir", "system_antivir_notes"
-]
+	 "errata_desc", "errata_date", "errata_reboot", "system_owner",
+	 "system_cluster", "system_virt", "system_virt_snapshot", "system_virt_vmname",
+ 	 "system_monitoring", "system_monitoring_notes", "system_monitoring_name",
+	 "system_backup", "system_backup_notes", "system_antivir", "system_antivir_notes"
+ ]
+DEFAULT_FIELDS = POSSIBLE_FIELDS
 LOGGER = logging.getLogger('satprep-snapshot')
+
 
 
 def parse_options(args=None):
@@ -49,24 +46,36 @@ It is also possible to create an authfile (permissions 0600) for usage with this
 If you're not defining variables or an authfile you will be prompted to enter your login information.
 
 Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-	parser = OptionParser(description=desc, version="%prog version 0.2")
+	parser = OptionParser(description=desc, version="%prog version 0.3")
+	#define option groups
+	genOpts = OptionGroup(parser, "Generic Options")
+	parser.add_option_group(genOpts)
+	srvOpts = OptionGroup(parser, "Server Options")
+	parser.add_option_group(srvOpts)
+	snapOpts = OptionGroup(parser, "Snapshot Options")
+	parser.add_option_group(snapOpts)
 	
-	#-a / --authfile
-	parser.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
-	#-s / --server
-	parser.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use")
+	#GENERIC OPTIONS
 	#-q / --quiet
-	parser.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout")
+	genOpts.add_option("-q", "--quiet", action="store_false", dest="verbose", default=True, help="don't print status messages to stdout (default: no)")
 	#-d / --debug
-	parser.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs")
-	#-o / --output
-	parser.add_option("-o", "--output", action="store", type="string", dest="output", default="foobar", metavar="FILE", help=("define CSV report filename. (default: " "errata-snapshot-report-RHNhostname-Ymd.csv)"))
-	#-f / --field
-	parser.add_option("-f", "--field", action="append", type="choice", dest="fields", choices=POSSIBLE_FIELDS, metavar="FIELDS", help="defines which fields should be integrated in the report")
-	#-p / --include-patches
-	parser.add_option("-p", "--include-patches", action="store_true", default=False, dest="includePatches", help=("defines whether package updates that are not part of an erratum shall be included"))
+	genOpts.add_option("-d", "--debug", dest="debug", default=False, action="store_true", help="enable debugging outputs (default: no)")
+	
+	#SERVER OPTIONS
+	#-a / --authfile
+	srvOpts.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
+	#-s / --server
+	srvOpts.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use (default: localhost)")
 	#-r / --reconnect-threshold
-	parser.add_option("-r", "--reconnect-threshold", action="store", type="int", default=5, dest="reconnectThreshold", metavar="THRESHOLD", help=("defines after how many host scans a re-login should be done (XMLRPC API timeout workaround)"))
+	srvOpts.add_option("-r", "--reconnect-threshold", action="store", type="int", default=5, dest="reconnectThreshold", metavar="THRESHOLD", help="defines after how many host scans a re-login should be done (XMLRPC API timeout workaround, default: 5)")
+	
+	#SNAPSHOT OPTIONS
+	#-o / --output
+	snapOpts.add_option("-o", "--output", action="store", type="string", dest="output", default="foobar", metavar="FILE", help=("define CSV report filename. (default: " "errata-snapshot-report-RHNhostname-Ymd.csv)"))
+	#-f / --field
+	#snapOpts.add_option("-f", "--field", action="append", type="choice", dest="fields", choices=POSSIBLE_FIELDS, metavar="FIELDS", help="defines which fields should be integrated in the report (default: all available)")
+	#-p / --include-patches
+	snapOpts.add_option("-p", "--include-patches", action="store_true", default=False, dest="includePatches", help="defines whether package updates that are not part of an erratum shall be included (default: no)")
 
 	(options, args) = parser.parse_args(args)
 
@@ -76,8 +85,8 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 			time=time.strftime("%Y%m%d-%H%M")
 		)
 
-	if options.fields is None:
-		options.fields = DEFAULT_FIELDS
+	#if options.fields is None:
+	#	options.fields = DEFAULT_FIELDS
 
 	LOGGER.debug("Options: {0}".format(options))
 	LOGGER.debug("Arguments: {0}".format(args))
@@ -85,8 +94,9 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 	return (options, args)
 
 
+
 def main(options):
-	(username, password) = get_credentials(options.authfile)
+	(username, password) = get_credentials("Satellite", options.authfile)
 
 	sattelite_url = "http://{0}/rpc/api".format(options.server)
 	client = xmlrpclib.Server(sattelite_url, verbose=options.debug)
@@ -96,14 +106,15 @@ def main(options):
 
 	#check whether the output directory/file is writable
 	if os.access(os.path.dirname(options.output), os.W_OK) or os.access(os.getcwd(), os.W_OK):
-		LOGGER.info("output file/directory writable!")
+		LOGGER.debug("output file/directory writable!")
 
 		#create CSV report, open file
 		csv.register_dialect("default", delimiter=";", quoting=csv.QUOTE_NONE)
 		writer = csv.writer(open(options.output, "w"), 'default')
 
 		#create header and scan _all_ the systems
-		writer.writerow(options.fields)
+		#writer.writerow(options.fields)
+		writer.writerow(DEFAULT_FIELDS)
 		systems = client.system.listSystems(key)
 		#counter variable for XMLRPC timeout workaround (https://github.com/stdevel/satprep/issues/5)
 		hostCounter = 0
@@ -113,7 +124,7 @@ def main(options):
 			#increase counter and re-login if necessary
 			if hostCounter == (options.reconnectThreshold-1):
 				#re-login
-				LOGGER.info("Re-login due to XMLRPC timeout workaround!")
+				LOGGER.debug("Re-login due to XMLRPC timeout workaround!")
 				client.auth.logout(key)
 				key = client.auth.login(username, password)
 				hostCounter = 0
@@ -129,15 +140,17 @@ def main(options):
 	client.auth.logout(key)
 
 
+
 def process_system(client, key, writer, system):
-	LOGGER.info("found host {0[name]} (SID {0[id]})".format(system))
-	process_erratas(client, key, writer, system)
+	LOGGER.debug("found host {0[name]} (SID {0[id]})".format(system))
+	process_errata(client, key, writer, system)
 
 	if options.includePatches:
 		process_patches(client, key, writer, system)
 
 
-def process_erratas(client, key, writer, system):
+
+def process_errata(client, key, writer, system):
 	columnErrataMapping = {
 		"hostname": "name",
 		"errata_name": "advisory_name",
@@ -150,7 +163,7 @@ def process_erratas(client, key, writer, system):
 	
 	errata = client.system.getRelevantErrata(key, system["id"])
 	if not errata:
-		LOGGER.debug("host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
+		LOGGER.info("host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
 		return
 
 	for i, erratum in enumerate(errata, start=1):
@@ -162,14 +175,14 @@ def process_erratas(client, key, writer, system):
 		)
 
 		valueSet = []
-		for column in options.fields:
+		for column in DEFAULT_FIELDS:
 			try:
 				valueSet.append(system[columnErrataMapping[column]])
-				LOGGER.info("Translated column '" + column + "' in '" + columnErrataMapping[column] + "'") 
+				LOGGER.debug("Translated column '" + column + "' in '" + columnErrataMapping[column] + "'") 
 				continue
 			except KeyError:
 				# Key not found - probably needs more logic.
-				LOGGER.info("Could not find column '" + column + "' in columnErrataMapping")
+				LOGGER.debug("Could not find column '" + column + "' in columnErrataMapping")
 				pass
 			
 			if column == "ip":
@@ -216,7 +229,7 @@ def process_erratas(client, key, writer, system):
 				if temp and "SYSTEM_OWNER" in temp:
 					valueSet.append(' '.join(temp["SYSTEM_OWNER"].split()))
 				else:
-					valueSet.append("null")
+					valueSet.append("unknown")
 			elif column == "system_cluster":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_CLUSTER" in temp
@@ -230,6 +243,20 @@ def process_erratas(client, key, writer, system):
 					valueSet.append(1)
 				else:
 					valueSet.append(0)
+			elif column == "system_virt_snapshot":
+                        	temp = client.system.getCustomValues(key, system["id"])
+                                if (temp and "SYSTEM_VIRT_SNAPSHOT" in temp
+                                        and temp["SYSTEM_VIRT_SNAPSHOT"] == "1"):
+                                        valueSet.append(1)
+                                else:
+                                        valueSet.append(0)
+			elif column == "system_virt_vmname":
+                        	temp = client.system.getCustomValues(key, system["id"])
+                                if (temp and "SYSTEM_VIRT_VMNAME" in temp
+                                        and temp["SYSTEM_VIRT_VMNAME"] != ""):
+                                        valueSet.append(temp["SYSTEM_VIRT_VMNAME"])
+                                else:
+                                        valueSet.append("")
 			elif column == "system_monitoring":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_MONITORING" in temp and
@@ -241,6 +268,13 @@ def process_erratas(client, key, writer, system):
 				temp = client.system.getCustomValues(key, system["id"])
 				if temp and "SYSTEM_MONITORING_NOTES" in temp:
 					valueSet.append(temp["SYSTEM_MONITORING_NOTES"])
+				else:
+					valueSet.append("")
+			elif column == "system_monitoring_name":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_MONITORING_NAME" in temp
+					and temp["SYSTEM_MONITORING_NAME"] != ""):
+					valueSet.append(temp["SYSTEM_MONITORING_NAME"])
 				else:
 					valueSet.append("")
 			elif column == "system_backup":
@@ -273,6 +307,7 @@ def process_erratas(client, key, writer, system):
 		writer.writerow(valueSet)
 
 
+
 def process_patches(client, key, writer, system):
 	updates = client.system.listLatestUpgradablePackages(key, system["id"])
 
@@ -299,7 +334,8 @@ def process_patches(client, key, writer, system):
 			continue
 
 		valueSet = []
-		for column in options.fields:
+		#for column in options.fields:
+		for column in DEFAULT_FIELDS:
 			if column == "hostname":
 				valueSet.append(system["name"])
 			elif column == "ip":
@@ -337,6 +373,20 @@ def process_patches(client, key, writer, system):
 					valueSet.append(1)
 				else:
 					valueSet.append(0)
+                        elif column == "system_virt_snapshot":
+                                temp = client.system.getCustomValues(key, system["id"])
+                                if (temp and "SYSTEM_VIRT_SNAPSHOT" in temp
+                                        and temp["SYSTEM_VIRT_SNAPSHOT"] == "1"):
+                                        valueSet.append(1)
+                                else:
+                                        valueSet.append(0)
+			elif column == "system_virt_vmname":
+                        	temp = client.system.getCustomValues(key, system["id"])
+                                if (temp and "SYSTEM_VIRT_VMNAME" in temp
+                                        and temp["SYSTEM_VIRT_VMNAME"] != ""):
+                                        valueSet.append(temp["SYSTEM_VIRT_VMNAME"])
+                                else:
+                                        valueSet.append("")
 			elif column == "system_monitoring":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_MONITORING" in temp and
@@ -348,6 +398,13 @@ def process_patches(client, key, writer, system):
 				temp = client.system.getCustomValues(key, system["id"])
 				if temp and "SYSTEM_MONITORING_NOTES" in temp:
 					valueSet.append(temp["SYSTEM_MONITORING_NOTES"])
+				else:
+					valueSet.append("")
+			elif column == "system_monitoring_name":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_MONITORING_NAME" in temp
+					and temp["SYSTEM_MONITORING_NAME"] != ""):
+					valueSet.append(temp["SYSTEM_MONITORING_NAME"])
 				else:
 					valueSet.append("")
 			elif column == "system_backup":
@@ -381,6 +438,7 @@ def process_patches(client, key, writer, system):
 			writer.writerow(valueSet)
 
 
+
 if __name__ == "__main__":
 	(options, args) = parse_options()
 
@@ -389,6 +447,6 @@ if __name__ == "__main__":
 		LOGGER.setLevel(logging.DEBUG)
 	else:
 		logging.basicConfig()
-		LOGGER.setLevel(logging.WARNING)
+		LOGGER.setLevel(logging.INFO)
 
 	main(options)

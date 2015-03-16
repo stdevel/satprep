@@ -1,1 +1,6 @@
 *.py[oc]
+*.csv
+*.log
+*.vlog
+*.auth
+TODO
