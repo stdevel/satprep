@@ -16,7 +16,7 @@ The following monitoring suites are supported:
 - [Icinga](http://www.icinga.org/)
 - [Thruk](http://www.thruk.org/)
 - [Shinken](http://www.shinken-monitoring.org)
-- course this also works in combination with the Swiss Army knife [OMD](http://www.omdistro.org).
+- of course this also works in combination with the Swiss Army knife [OMD](http://www.omdistro.org).
 
 As this toolkit uses the Python bindings of [libvirt](http://www.libvirt.org) a wide range of Hypervisors can be used - including:
 - KVM/Qemu
