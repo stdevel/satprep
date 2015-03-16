@@ -63,7 +63,7 @@ Afterwards the reports are stored in `/tmp`.
 
 For gathering optional semantic information (*e.g. backup and monitoring*) the script makes usage of the **custom system information** feature of Spacewalk, Red Hat Satellite or SUSE Manager. After installing the custom keys using the `satprep_install_custominfo.py` utility you can assign the following information per host (*only a selection*):
 * **SYSTEM_OWNER** - server responsible in your team
-* **SYSTEM_MONITORING** - monitoring state (*0 or empty = disabled, 1 = enabled*))
+* **SYSTEM_MONITORING** - monitoring state (*0 or empty = disabled, 1 = enabled*)
 * **SYSTEM_BACKUP** - defines whether the host is protected using backups (*0 or empty = no, 1 = yes*)
 * **SYSTEM_ANTIVIR** - defines whether the host is protected against viruses (*0 or empty = no, 1 = yes*)
 
