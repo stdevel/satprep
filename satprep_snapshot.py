@@ -252,9 +252,17 @@ def process_errata(client, key, writer, system):
                                         valueSet.append(0)
 			elif column == "system_virt_vmname":
                         	temp = client.system.getCustomValues(key, system["id"])
+				temp_vmname=""
                                 if (temp and "SYSTEM_VIRT_VMNAME" in temp
                                         and temp["SYSTEM_VIRT_VMNAME"] != ""):
-                                        valueSet.append(temp["SYSTEM_VIRT_VMNAME"])
+					temp_vmname=temp["SYSTEM_VIRT_VMNAME"]
+					#also add custom host and password if given
+					if (temp and "SYSTEM_VIRT_HOST" in temp
+					and temp["SYSTEM_VIRT_HOST"] != "" and
+					"SYSTEM_VIRT_HOST_AUTH" in temp and
+					temp["SYSTEM_VIRT_HOST_AUTH"] != ""):
+						temp_vmname = temp_vmname + "@" + temp["SYSTEM_VIRT_HOST"] + ":" + temp["SYSTEM_VIRT_HOST_AUTH"]
+                                        valueSet.append(temp_vmname)
                                 else:
                                         valueSet.append("")
 			elif column == "system_monitoring":
@@ -272,9 +280,17 @@ def process_errata(client, key, writer, system):
 					valueSet.append("")
 			elif column == "system_monitoring_name":
 				temp = client.system.getCustomValues(key, system["id"])
+				temp_monname = ""
 				if (temp and "SYSTEM_MONITORING_NAME" in temp
 					and temp["SYSTEM_MONITORING_NAME"] != ""):
-					valueSet.append(temp["SYSTEM_MONITORING_NAME"])
+					temp_monname=temp["SYSTEM_MONITORING_NAME"]
+					#also add custom host and password if given
+					if (temp and "SYSTEM_MONITORING_HOST" in temp
+					and temp["SYSTEM_MONITORING_HOST"] != "" and
+					"SYSTEM_MONITORING_HOST_AUTH" in temp and
+					temp["SYSTEM_MONITORING_HOST_AUTH"] != ""):
+						temp_vmname = temp_vmname + "@" + temp["SYSTEM_MONITORING_HOST"] + ":" + temp["SYSTEM_MONITORING_HOST_AUTH"]
+					valueSet.append(temp_monname)
 				else:
 					valueSet.append("")
 			elif column == "system_backup":
