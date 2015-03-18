@@ -80,21 +80,21 @@ def create_custom_keys(client, session_key, force_creation=False):
                 LOGGER.debug("DEBUG: about to add system information key '" + new_key + "' with description '" + CUSTOM_KEYS.get(new_key) + "'...")
                 if new_key in defined_keys_as_str:
                         if force_creation:
-                                LOGGER.info("INFO: overwriting pre-existing key '" + new_key + "' with description '" + CUSTOM_KEYS.get(new_key) + "'...")
+                                LOGGER.info("Overwriting pre-existing key '" + new_key + "' with description '" + CUSTOM_KEYS.get(new_key) + "'...")
 
                                 resultcode = client.system.custominfo.updateKey(
                                         session_key, new_key, CUSTOM_KEYS.get(new_key))
                         else:
-                                LOGGER.warning("INFO: key '" + new_key + "' already exists. Use -f / --force to overwrite!")
+                                LOGGER.warning("Key '" + new_key + "' already exists. Use -f / --force to overwrite!")
                 else:
                         resultcode = client.system.custominfo.createKey(
                                 session_key, new_key, CUSTOM_KEYS.get(new_key))
 
                 if resultcode == 1:
-                        LOGGER.info("INFO: successfully created/updated information key '{0}'".format(new_key))
+                        LOGGER.info("Successfully created/updated information key '{0}'".format(new_key))
                 else:
                         if new_key not in CUSTOM_KEYS:
-                                LOGGER.warning("INFO: unable to create key '{0}': check your account permissions!".format(new_key))
+                                LOGGER.warning("Unable to create key '{0}': check your account permissions!".format(new_key))
 
 
 def parse_options(args=None):
@@ -150,9 +150,9 @@ def remove_custom_keys(client, session_key):
                 resultcode = client.system.custominfo.deleteKey(session_key, key)
 
                 if resultcode == 1:
-                        LOGGER.info("INFO: successfully removed information key '{0}'".format(key))
+                        LOGGER.info("Successfully removed information key '{0}'".format(key))
                 else:
-                        LOGGER.warning("INFO: unable to remove key '{0}': check your account permissions!".format(key))
+                        LOGGER.warning("Unable to remove key '{0}': check your account permissions!".format(key))
 
 
 

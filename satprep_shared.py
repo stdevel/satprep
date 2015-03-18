@@ -37,7 +37,7 @@ def check_if_api_is_supported(client):
             "You'll need API version 1.8 (11.1) or higher!".format(api_level)
         )
     else:
-        LOGGER.info("INFO: supported API version (" + api_level + ") found.")
+        LOGGER.info("Supported API version (" + api_level + ") found.")
 
 
 
@@ -55,10 +55,10 @@ def get_credentials(type, input_file=None):
                     s_password = auth_file.readline().replace("\n", "")
                 return (s_username, s_password)
             else:
-                LOGGER.warning("INFO: file permission (" + filemode + ") not matching 0600!")
+                LOGGER.warning("File permission (" + filemode + ") not matching 0600!")
                 #sys.exit(1)
         except OSError:
-		LOGGER.warning("INFO: file non-existent or permissions not 0600!")
+		LOGGER.warning("File non-existent or permissions not 0600!")
 		#sys.exit(1)
         	LOGGER.debug("DEBUG: prompting for login credentials as we have a faulty file")
 		s_username = raw_input(type + " Username: ")
@@ -91,7 +91,7 @@ def has_snapshot(virtURI, hostUsername, hostPassword, vmName, name):
 	conn = libvirt.openAuth(virtURI, auth, 0)
 	
 	if conn == None:
-		LOGGER.error("ERROR: Unable to establish connection to hypervisor!")
+		LOGGER.error("Unable to establish connection to hypervisor!")
 		return False
 	try:
 		targetVM = conn.lookupByName(vmName)
@@ -122,7 +122,7 @@ def is_downtime(url, monUsername, monPassword, host, agent, noAuth=False):
 	
 	#check whether request was successful
 	if r.status_code != 200:
-		LOGGER.error("ERROR: Got HTTP status code " + str(r.status_code) + " instead of 200 while checking downtime for host '" + host + "'. Check URL and logon credentials!")
+		LOGGER.error("Got HTTP status code " + str(r.status_code) + " instead of 200 while checking downtime for host '" + host + "'. Check URL and logon credentials!")
 		return False
 	else:
 		if "error" in r.text.lower(): LOGGER.error("Unable to get downtime for host '" + host + "' - please run again with -d / --debug and check HTML output! (does this host exist?!)")
@@ -169,10 +169,10 @@ def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent
 	
 	#check whether request was successful
 	if r.status_code != 200:
-		LOGGER.error("ERROR: Got HTTP status code " + str(r.status_code) + " instead of 200 while scheduling downtime for host '" + host + "'. Check URL and logon credentials!")
+		LOGGER.error("Got HTTP status code " + str(r.status_code) + " instead of 200 while scheduling downtime for host '" + host + "'. Check URL and logon credentials!")
 		return False
 	else:
-		if "error" in r.text.lower(): LOGGER.error("ERROR: unable to (un)schedule downtime for host '" + host + "' - please run again with -d / --debug and check HTML output! (does this host exist?!)")
+		if "error" in r.text.lower(): LOGGER.error("Unable to (un)schedule downtime for host '" + host + "' - please run again with -d / --debug and check HTML output! (does this host exist?!)")
 		else:
 			if unschedule: print "Successfully unscheduled downtime for host '" + host + "'"
 			else: print "Successfully scheduled downtime for host '" + host + "'"
@@ -223,7 +223,7 @@ def create_snapshot(virtURI, hostUsername, hostPassword, vmName, name, comment, 
 	conn = libvirt.openAuth(virtURI, auth, 0)
 	
 	if conn == None:
-		LOGGER.error("ERROR: Unable to establish connection to hypervisor!")
+		LOGGER.error("Unable to establish connection to hypervisor!")
 		#sys.exit(1)
 		return False
 	
@@ -240,7 +240,7 @@ def create_snapshot(virtURI, hostUsername, hostPassword, vmName, name, comment, 
 	except Exception,e: 
 		#Snapshot 'Before maintenance' already exists
 		if remove:
-			LOGGER.error("ERROR: Unable to remove snapshot: '" + str(e) + "'")
+			LOGGER.error("Unable to remove snapshot: '" + str(e) + "'")
 		else:
-			LOGGER.error("ERROR: Unable to create snapshot: '" + str(e) + "'")
+			LOGGER.error("Unable to create snapshot: '" + str(e) + "'")
 		return False

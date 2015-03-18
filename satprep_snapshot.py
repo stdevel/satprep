@@ -134,7 +134,7 @@ def main(options):
 
 	else:
 		#output file/directory not writable
-		LOGGER.critical("ERROR: Output file/directory ({0}) not writable".format(options.output))
+		LOGGER.critical("Output file/directory ({0}) not writable".format(options.output))
 
 	#logout and exit
 	client.auth.logout(key)
