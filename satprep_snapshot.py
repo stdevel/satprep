@@ -23,9 +23,9 @@ from satprep_shared import check_if_api_is_supported, get_credentials
 
 #define fields, previously it was possible to define custom fields
 POSSIBLE_FIELDS = ["hostname", "ip", "errata_name", "errata_type",
-	 "errata_desc", "errata_date", "errata_reboot", "system_owner",
+	 "errata_desc", "errata_date", "errata_reboot", "system_owner", "system_prod",
 	 "system_cluster", "system_virt", "system_virt_snapshot", "system_virt_vmname",
- 	 "system_monitoring", "system_monitoring_notes", "system_monitoring_name",
+ 	 "system_monitoring", "system_monitoring_name", "system_monitoring_notes",
 	 "system_backup", "system_backup_notes", "system_antivir", "system_antivir_notes"
  ]
 DEFAULT_FIELDS = POSSIBLE_FIELDS
@@ -85,9 +85,6 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 			time=time.strftime("%Y%m%d-%H%M")
 		)
 
-	#if options.fields is None:
-	#	options.fields = DEFAULT_FIELDS
-
 	LOGGER.debug("Options: {0}".format(options))
 	LOGGER.debug("Arguments: {0}".format(args))
 	
@@ -106,7 +103,7 @@ def main(options):
 
 	#check whether the output directory/file is writable
 	if os.access(os.path.dirname(options.output), os.W_OK) or os.access(os.getcwd(), os.W_OK):
-		LOGGER.debug("output file/directory writable!")
+		LOGGER.debug("Output file/directory writable!")
 
 		#create CSV report, open file
 		csv.register_dialect("default", delimiter=";", quoting=csv.QUOTE_NONE)
@@ -142,7 +139,7 @@ def main(options):
 
 
 def process_system(client, key, writer, system):
-	LOGGER.debug("found host {0[name]} (SID {0[id]})".format(system))
+	LOGGER.debug("Found host {0[name]} (SID {0[id]})".format(system))
 	process_errata(client, key, writer, system)
 
 	if options.includePatches:
@@ -163,7 +160,7 @@ def process_errata(client, key, writer, system):
 	
 	errata = client.system.getRelevantErrata(key, system["id"])
 	if not errata:
-		LOGGER.info("host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
+		LOGGER.info("Host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
 		return
 
 	for i, erratum in enumerate(errata, start=1):
@@ -230,6 +227,13 @@ def process_errata(client, key, writer, system):
 					valueSet.append(' '.join(temp["SYSTEM_OWNER"].split()))
 				else:
 					valueSet.append("unknown")
+			elif column == "system_prod":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_PROD" in temp
+					and temp["SYSTEM_PROD"] == "1"):
+					valueSet.append(1)
+				else:
+					valueSet.append(0)
 			elif column == "system_cluster":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_CLUSTER" in temp
@@ -263,8 +267,7 @@ def process_errata(client, key, writer, system):
 					temp["SYSTEM_VIRT_HOST_AUTH"] != ""):
 						temp_vmname = temp_vmname + "@" + temp["SYSTEM_VIRT_HOST"] + ":" + temp["SYSTEM_VIRT_HOST_AUTH"]
                                         valueSet.append(temp_vmname)
-                                else:
-                                        valueSet.append("")
+				else: valueSet.append("")
 			elif column == "system_monitoring":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_MONITORING" in temp and
@@ -272,12 +275,6 @@ def process_errata(client, key, writer, system):
 					valueSet.append(1)
 				else:
 					valueSet.append(0)
-			elif column == "system_monitoring_notes":
-				temp = client.system.getCustomValues(key, system["id"])
-				if temp and "SYSTEM_MONITORING_NOTES" in temp:
-					valueSet.append(temp["SYSTEM_MONITORING_NOTES"])
-				else:
-					valueSet.append("")
 			elif column == "system_monitoring_name":
 				temp = client.system.getCustomValues(key, system["id"])
 				temp_monname = ""
@@ -291,6 +288,12 @@ def process_errata(client, key, writer, system):
 					temp["SYSTEM_MONITORING_HOST_AUTH"] != ""):
 						temp_vmname = temp_vmname + "@" + temp["SYSTEM_MONITORING_HOST"] + ":" + temp["SYSTEM_MONITORING_HOST_AUTH"]
 					valueSet.append(temp_monname)
+				else:
+					valueSet.append("")
+			elif column == "system_monitoring_notes":
+				temp = client.system.getCustomValues(key, system["id"])
+				if temp and "SYSTEM_MONITORING_NOTES" in temp:
+					valueSet.append(temp["SYSTEM_MONITORING_NOTES"])
 				else:
 					valueSet.append("")
 			elif column == "system_backup":
@@ -328,7 +331,7 @@ def process_patches(client, key, writer, system):
 	updates = client.system.listLatestUpgradablePackages(key, system["id"])
 
 	if not updates:
-		LOGGER.debug("host {0[name]} (SID {0[id]}) has no relevant updates.".format(system))
+		LOGGER.debug("Host {0[name]} (SID {0[id]}) has no relevant updates.".format(system))
 		return
 
 	for i, update in enumerate(updates, start=1):
@@ -343,7 +346,7 @@ def process_patches(client, key, writer, system):
 		if client.packages.listProvidingErrata(key, update["to_package_id"]):
 			# We only add update information if it is not not
 			# already displayed as part of an erratum
-			LOGGER.debug("dropping update {0[name]} "
+			LOGGER.debug("Dropping update {0[name]} "
 				"({0[to_package_id]}) as it's already part of "
 				"an erratum.".format(update)
 			)
@@ -376,6 +379,13 @@ def process_patches(client, key, writer, system):
 					valueSet.append(' '.join(temp["SYSTEM_OWNER"].split()))
 				else:
 					valueSet.append("unknown")
+			elif column == "system_prod":
+				temp = client.system.getCustomValues(key, system["id"])
+				if (temp and "SYSTEM_PROD" in temp
+					and temp["SYSTEM_PROD"] == "1"):
+					valueSet.append(1)
+				else:
+					valueSet.append(0)
 			elif column == "system_cluster":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_CLUSTER" in temp
@@ -398,11 +408,18 @@ def process_patches(client, key, writer, system):
                                         valueSet.append(0)
 			elif column == "system_virt_vmname":
                         	temp = client.system.getCustomValues(key, system["id"])
+				temp_vmname=""
                                 if (temp and "SYSTEM_VIRT_VMNAME" in temp
                                         and temp["SYSTEM_VIRT_VMNAME"] != ""):
-                                        valueSet.append(temp["SYSTEM_VIRT_VMNAME"])
-                                else:
-                                        valueSet.append("")
+					temp_vmname=temp["SYSTEM_VIRT_VMNAME"]
+					#also add custom host and password if given
+					if (temp and "SYSTEM_VIRT_HOST" in temp
+					and temp["SYSTEM_VIRT_HOST"] != "" and
+					"SYSTEM_VIRT_HOST_AUTH" in temp and
+					temp["SYSTEM_VIRT_HOST_AUTH"] != ""):
+						temp_vmname = temp_vmname + "@" + temp["SYSTEM_VIRT_HOST"] + ":" + temp["SYSTEM_VIRT_HOST_AUTH"]
+                                        valueSet.append(temp_vmname)
+				else: valueSet.append("")
 			elif column == "system_monitoring":
 				temp = client.system.getCustomValues(key, system["id"])
 				if (temp and "SYSTEM_MONITORING" in temp and
@@ -410,17 +427,25 @@ def process_patches(client, key, writer, system):
 					valueSet.append(1)
 				else:
 					valueSet.append(0)
+			elif column == "system_monitoring_name":
+				temp = client.system.getCustomValues(key, system["id"])
+				temp_monname = ""
+				if (temp and "SYSTEM_MONITORING_NAME" in temp
+					and temp["SYSTEM_MONITORING_NAME"] != ""):
+					temp_monname=temp["SYSTEM_MONITORING_NAME"]
+					#also add custom host and password if given
+					if (temp and "SYSTEM_MONITORING_HOST" in temp
+					and temp["SYSTEM_MONITORING_HOST"] != "" and
+					"SYSTEM_MONITORING_HOST_AUTH" in temp and
+					temp["SYSTEM_MONITORING_HOST_AUTH"] != ""):
+						temp_vmname = temp_vmname + "@" + temp["SYSTEM_MONITORING_HOST"] + ":" + temp["SYSTEM_MONITORING_HOST_AUTH"]
+					valueSet.append(temp_monname)
+				else:
+					valueSet.append("")
 			elif column == "system_monitoring_notes":
 				temp = client.system.getCustomValues(key, system["id"])
 				if temp and "SYSTEM_MONITORING_NOTES" in temp:
 					valueSet.append(temp["SYSTEM_MONITORING_NOTES"])
-				else:
-					valueSet.append("")
-			elif column == "system_monitoring_name":
-				temp = client.system.getCustomValues(key, system["id"])
-				if (temp and "SYSTEM_MONITORING_NAME" in temp
-					and temp["SYSTEM_MONITORING_NAME"] != ""):
-					valueSet.append(temp["SYSTEM_MONITORING_NAME"])
 				else:
 					valueSet.append("")
 			elif column == "system_backup":

@@ -101,11 +101,11 @@ def main(options):
 	#set default logo if none specified or not readable
 	if options.logoImage is None or not os.access(os.path.dirname(options.logoImage), os.R_OK):
 		if options.logoImage: LOGGER.error("given logo image (" + str(options.logoImage) + ") not readable, using default logo (" + thisFolder + "/default_logo.jpg" + ")")
-		if options.debug: LOGGER.debug("DEBUG image logo changed to: " + thisFolder + "/default_logo.jpg")
+		if options.debug: LOGGER.debug("Image logo changed to: " + thisFolder + "/default_logo.jpg")
 		options.logoImage = thisFolder + "/default_logo.jpg"
 	
 	#print arguments
-	if options.debug: LOGGER.debug("options:"+str(options)+"\nDEBUG: args: "+str(args))
+	if options.debug: LOGGER.debug("options:"+str(options)+"\nargs: "+str(args))
 	
 	#check whether two arguments containing (the report files) are given
 	#TODO: check if delta report specified with -c / --csv
@@ -129,7 +129,7 @@ def main(options):
 			try:
 				repcols[name] = headers.index(name)
 			except ValueError:
-				if options.debug: "DEBUG: unable to find column index for " + name + " so I'm disabling it."
+				if options.debug: "Unable to find column index for " + name + " so I'm disabling it."
 		#print report column indexes
 		if options.debug: LOGGER.debug("Report column indexes: " + str(repcols))
 	else:

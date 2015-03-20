@@ -13,6 +13,7 @@ from pysphere import VIServer
 #some global variables
 host_vms={}
 hosts_by_dc = {}
+hosts_by_cluster = {}
 satellite_vmtypes=["Red Hat Enterprise", "CentOS", "SUSE", "openSUSE", "Debian", "Ubuntu", "Solaris", "Fedora"]
 
 #set logger
@@ -54,6 +55,14 @@ def main(options):
 		tempHosts = myVC.get_hosts(from_mor=dc).values()
 		hosts_by_dc[datacenters.get(dc)] = (tempHosts)
 	LOGGER.debug("Hosts by DC: " + str(hosts_by_dc))
+	
+	#get list of all ESXi hosts by cluster
+	LOGGER.info("Searching for ESXi hosts by cluster...")
+	clusters = myVC.get_clusters()
+	for cluster in clusters:
+		tempHosts = myVC.get_hosts(from_mor=cluster).values()
+		hosts_by_cluster[clusters.get(cluster)] = (tempHosts)
+	LOGGER.debug("Hosts by cluster: " + str(hosts_by_cluster))
 	
 	#get list of all VMs by ESXi host
 	for dc in datacenters:
@@ -112,8 +121,15 @@ def main(options):
 			if "SYSTEM_VIRT_VMNAME" in thisKeys and thisKeys["SYSTEM_VIRT_VMNAME"] != "":
 				this_ESXi = get_ESXi_host_by_vm(thisKeys["SYSTEM_VIRT_VMNAME"])
 			else: this_ESXi = get_ESXi_host_by_vm(system["name"])
+			#get cluster if applicable
+			this_cluster = get_cluster_by_ESXi_host(this_ESXi)
 			#update custom key
-			this_value = "vpx://" + options.vcServer + "/" + get_datacenter_by_ESXi_host(this_ESXi) + "/" + this_ESXi
+			if this_cluster != "":
+				#cluster
+				this_value = "vpx://" + options.vcServer + "/" + get_datacenter_by_ESXi_host(this_ESXi) + "/" + this_cluster + "/" + this_ESXi
+			else:
+				#no cluster
+				this_value = "vpx://" + options.vcServer + "/" + get_datacenter_by_ESXi_host(this_ESXi) + "/" + this_ESXi
 			if options.vcVerify == False: this_value = this_value + "?no_verify=1"
 			if options.dryrun:
 				if this_ESXi != "": LOGGER.info("I'd like to set SYSTEM_VIRT_HOST='" + this_value + "' for system '" + system["name"] + "' (ID " + str(system["id"]) + ")")
@@ -139,7 +155,7 @@ def is_satellite_managed(name):
 
 
 
-#get datacenter by ESXi hsot
+#get datacenter by ESXi host
 def get_datacenter_by_ESXi_host(host):
 	global hosts_by_dc
 	
@@ -147,6 +163,18 @@ def get_datacenter_by_ESXi_host(host):
 	for dc in hosts_by_dc:
 		hosts = hosts_by_dc[dc]
 		if host in hosts: return dc
+	return ""
+
+
+
+#get cluster by ESXi host
+def get_cluster_by_ESXi_host(host):
+	global hosts_by_cluster
+	
+	#scan all clusters
+	for cluster in hosts_by_cluster:
+		hosts = hosts_by_cluster[cluster]
+		if host in hosts: return cluster
 	return ""
 
 

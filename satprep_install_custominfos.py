@@ -73,11 +73,11 @@ def create_custom_keys(client, session_key, force_creation=False):
         definedKeys = client.system.custominfo.listAllKeys(session_key)
         defined_keys_as_str = str(definedKeys)
 
-        LOGGER.debug("DEBUG: pre-defined custom information keys: {0}".format(definedKeys))
+        LOGGER.debug("Pre-defined custom information keys: {0}".format(definedKeys))
         for new_key in CUSTOM_KEYS:
                 resultcode = 0
 
-                LOGGER.debug("DEBUG: about to add system information key '" + new_key + "' with description '" + CUSTOM_KEYS.get(new_key) + "'...")
+                LOGGER.debug("About to add system information key '" + new_key + "' with description '" + CUSTOM_KEYS.get(new_key) + "'...")
                 if new_key in defined_keys_as_str:
                         if force_creation:
                                 LOGGER.info("Overwriting pre-existing key '" + new_key + "' with description '" + CUSTOM_KEYS.get(new_key) + "'...")
@@ -146,7 +146,7 @@ def remove_custom_keys(client, session_key):
 
         for key in CUSTOM_KEYS:
                 resultcode = 0
-                LOGGER.debug("DEBUG: about to add system information key '" + key + "'...")
+                LOGGER.debug("About to add system information key '" + key + "'...")
                 resultcode = client.system.custominfo.deleteKey(session_key, key)
 
                 if resultcode == 1:

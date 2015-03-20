@@ -24,7 +24,7 @@ LOGGER = logging.getLogger('satprep_prepare_maintenance')
 #some global parameters
 downtimeHosts=[]
 snapshotHosts=[]
-blacklist=["hostname","system_monitoring_name","system_virt_vmname"]
+blacklist=["hostname","system_monitoring_name","system_virt_vmname","system_monitoring_notes","1","0",""]
 myPrefix=""
 defaultMonUser=""
 defaultMonPass=""
@@ -230,7 +230,6 @@ def createSnapshots():
 			LOGGER.info(output)
 			
 			#create/remove snapshot
-			LOGGER.debug("***FAK " + thisURI + "|" + thisCred)
 			if thisURI != "" and thisCred != "":
 				#get username and password
 				(thisUsername, thisPassword) = get_credentials(thisURI, thisCred)
@@ -255,38 +254,77 @@ def readFile(file):
 	rFile = open(args[1], 'r')
 	header = rFile.readline()
 	headers = header.replace("\n","").replace("\r","").split(";")
-	repcols = { "hostname" : 666, "errata_reboot" : 666, "system_monitoring" : 666, "system_monitoring_name" : 666, "system_virt" : 666, "system_virt_snapshot" : 666, "system_virt_vmname" : 666 }
+	repcols = { "hostname" : 666, "errata_reboot" : 666, "system_prod": 666, "system_monitoring" : 666, "system_monitoring_name" : 666, "system_virt" : 666, "system_virt_snapshot" : 666, "system_virt_vmname" : 666 }
 	for name,value in repcols.items():
 		try:
 			#try to find index
 			repcols[name] = headers.index(name)
 		except ValueError:
-			LOGGER.debug("DEBUG: unable to find column index for " + name + " so I'm disabling it.")
+			LOGGER.debug("Unable to find column index for " + name + " so I'm disabling it.")
 	#print report column indexes
-	LOGGER.debug("DEBUG: report column indexes: {0}".format(str(repcols)))
+	LOGGER.debug("Report column indexes: {0}".format(str(repcols)))
 	
 	#read report and add affected hosts
 	with open(file, 'rb') as csvfile:
 		filereader = csv.reader(csvfile, delimiter=';', quotechar='|')
 		for row in filereader:
-			#print ', '.join(row)
+			#LOGGER.debug("hostname: " + row[repcols["hostname"]] + "; system_prod:" + row[repcols["system_prod"]] + "; system_monitoring:" + row[repcols["system_monitoring"]] + "; system_monitoring_name:" + row[repcols["system_monitoring_name"]] + "; system_virt_vmname:" + row[repcols["system_virt_vmname"]] + "; system_virt_snapshot:" + row[repcols["system_virt_snapshot"]])
+			
 			if options.noIntelligence == True:
-				#simply add the damned host, add custom names if defined
-				if repcols["system_monitoring_name"] < 666 and row[repcols["system_monitoring_name"]] != "": downtimeHosts.append(row[repcols["system_monitoring_name"]])
-				else: downtimeHosts.append(row[repcols["hostname"]])
-				if repcols["system_virt_vmname"] < 666 and row[repcols["system_virt_vmname"]] != "": snapshotHosts.append(row[repcols["system_virt_vmname"]])
-				else: snapshotHosts.append(row[repcols["hostname"]])
+				#simply add the damned host
+				
+				#monitoring, add custom name if defined
+				if repcols["system_monitoring_name"] < 666 and row[repcols["system_monitoring_name"]] != "":
+					this_name=row[repcols["system_monitoring_name"]]
+				else: this_name=row[repcols["hostname"]]
+				#only add if prod/nonprod modes aren't avoiding it
+				if (row[repcols["system_prod"]] == "1" and options.nonprodOnly == False) \
+				or (row[repcols["system_prod"]] != "1" and options.prodOnly == False) \
+				or (options.prodOnly == False and options.nonprodOnly == False):
+					if row[repcols["hostname"]].lower() not in options.exclude: downtimeHosts.append(this_name)
+					LOGGER.debug("Downtime will be scheduled for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
+				
+				#virtualization, add custom name if defined
+				if repcols["system_virt_vmname"] < 666 and row[repcols["system_virt_vmname"]] != "":
+					this_name=row[repcols["system_virt_vmname"]]
+				else: this_name=row[repcols["hostname"]]
+				#only add if prod/nonprod modes aren't avoiding it
+				if (row[repcols["system_prod"]] == "1" and options.nonprodOnly == False) \
+				or (row[repcols["system_prod"]] != "1" and options.prodOnly == False) \
+				or (options.prodOnly == False and options.nonprodOnly == False):
+					if row[repcols["hostname"]].lower() not in options.exclude: snapshotHosts.append(this_name)
+					LOGGER.debug("Snapshot will be created for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
+				else:
+					LOGGER.debug("Script parameters are avoiding creating snapshot for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 			else:
 				#add host to downtimeHosts if reboot required and monitoring flag set, add custom names if defined
-				if repcols["system_monitoring"] < 666 and row[repcols["system_monitoring"]] == "1" and repcols["errata_reboot"] < 666 and row[repcols["errata_reboot"]] == "1":
+				if row[repcols["system_monitoring"]] == "1" and row[repcols["errata_reboot"]] == "1":
 					#handle custom name
-					if repcols["system_monitoring_name"] < 666 and row[repcols["system_monitoring_name"]] != "": downtimeHosts.append(row[repcols["system_monitoring_name"]])
-					else: downtimeHosts.append(row[repcols["hostname"]])
+					if row[repcols["system_monitoring"]] == "1" and row[repcols["system_monitoring_name"]] != "":
+						this_name = row[repcols["system_monitoring_name"]]
+					else: this_name = row[repcols["hostname"]]
+					#only add if prod/nonprod modes aren't avoiding it
+					if (row[repcols["system_prod"]] == "1" and options.nonprodOnly == False) \
+					or (row[repcols["system_prod"]] != "1" and options.prodOnly == False) \
+					or (options.prodOnly == False and options.nonprodOnly == False):
+						if row[repcols["hostname"]].lower() not in options.exclude: downtimeHosts.append(this_name)
+						LOGGER.debug("Downtime will be scheduled for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
+					else: LOGGER.debug("Script parameters are avoiding scheduling downtime for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
+				
 				#add host to snapshotHosts if virtual and snapshot flag set
 				if repcols["system_virt"] < 666 and row[repcols["system_virt"]] == "1" and repcols["system_virt_snapshot"] < 666 and row[repcols["system_virt_snapshot"]] == "1":
 					#handle custom name
-					if repcols["system_virt_vmname"] < 666 and row[repcols["system_virt_vmname"]] != "": snapshotHosts.append(row[repcols["system_virt_vmname"]])
-					else: snapshotHosts.append(row[repcols["hostname"]])
+					if row[repcols["system_virt_vmname"]] != "":
+						this_name = row[repcols["system_virt_vmname"]]
+					else: this_name = row[repcols["hostname"]]
+					#only add if prod/nonprod modes aren't avoiding it
+					if (row[repcols["system_prod"]] == "1" and options.nonprodOnly == False) \
+					or (row[repcols["system_prod"]] != "1" and options.prodOnly == False) \
+					or (options.prodOnly == False and options.nonprodOnly == False):
+						if row[repcols["hostname"]].lower() not in options.exclude: snapshotHosts.append(this_name)
+						LOGGER.debug("Snapshot will be created for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
+					else:
+						LOGGER.debug("Script parameters are avoiding creating snapshot for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 					
 	#remove duplicates and blacklisted lines
 	downtimeHosts = sorted(set(downtimeHosts))
@@ -295,8 +333,8 @@ def readFile(file):
 		if entry in downtimeHosts: downtimeHosts.remove(entry)
 		if entry in snapshotHosts: snapshotHosts.remove(entry)
 	#print affected hosts
-	LOGGER.debug("DEBUG: affected hosts for downtimes: {0}".format(downtimeHosts))
-	LOGGER.debug("DEBUG: affected hosts for snapshots: {0}".format(snapshotHosts))
+	LOGGER.debug("Affected hosts for downtimes: {0}".format(downtimeHosts))
+	LOGGER.debug("Affected hosts for snapshots: {0}".format(snapshotHosts))
 
 
 
@@ -339,9 +377,11 @@ def parse_options(args=None):
 	genOpts = OptionGroup(parser, "Generic Options")
 	monOpts = OptionGroup(parser, "Monitoring Options")
 	vmOpts = OptionGroup(parser, "VM Options")
+	repOpts = OptionGroup(parser, "Report Options")
 	parser.add_option_group(genOpts)
 	parser.add_option_group(monOpts)
 	parser.add_option_group(vmOpts)
+	parser.add_option_group(repOpts)
 	
 	#GENERIC OPTIONS
 	#-c / --comment
@@ -356,6 +396,14 @@ def parse_options(args=None):
 	genOpts.add_option("-T", "--tidy", dest="tidy", action="store_true", default=False, help="unschedules downtimes and removes previously created snapshots (default: no)")
 	#-V / --verify-only
 	genOpts.add_option("-V", "--verify-only", dest="verifyOnly", action="store_true", default="False", help="verifies that all required downtimes and snapshots have been created and quits (default: no)")
+	
+	#REPORT OPTIONS
+	#-p / --prod-only
+	repOpts.add_option("-p", "--prod-only", dest="prodOnly", action="store_true", default=False, help="only prepares maintenance for productive hosts (default: no)")
+	#-D / --nonprod-only
+	repOpts.add_option("-D", "--nonprod-only", dest="nonprodOnly", action="store_true", default=False, help="only prepares maintenance for non-productive hosts (default: no)")
+	#-e / --exclude
+	repOpts.add_option("-e", "--exclude", dest="exclude", action="append", type="string", default=[], help="defines hosts that should be exluded from preparing maintenance")
 	
 	#MONITORING OPTIONS
 	#-k / --skip-monitoring
@@ -387,7 +435,13 @@ def parse_options(args=None):
 		exit(1)
 	
 	#tell user that he's a funny guy
-	if options.skipSnapshot and options.skipMonitoring: print "Haha, you're funny."
+	if (
+		(options.skipSnapshot and options.skipMonitoring)
+		or
+		(options.prodOnly == True and options.nonprodOnly == True)
+	):
+		print "Haha, you're funny."
+		exit(1)
 	
 	return (options, args)
 
