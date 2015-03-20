@@ -44,33 +44,33 @@ def check_if_api_is_supported(client):
 def get_credentials(type, input_file=None):
 #retrieve credentials
     if input_file:
-        LOGGER.debug("DEBUG: using authfile")
+        LOGGER.debug("Using authfile")
         try:
             # check filemode and read file
             filemode = oct(stat.S_IMODE(os.lstat(input_file).st_mode))
             if filemode == "0600":
-                LOGGER.debug("DEBUG: file permission matches 0600")
+                LOGGER.debug("File permission matches 0600")
                 with open(input_file, "r") as auth_file:
                     s_username = auth_file.readline().replace("\n", "")
                     s_password = auth_file.readline().replace("\n", "")
                 return (s_username, s_password)
             else:
-                LOGGER.warning("File permission (" + filemode + ") not matching 0600!")
+                LOGGER.warning("File permissions (" + filemode + ") not matching 0600!")
                 #sys.exit(1)
         except OSError:
 		LOGGER.warning("File non-existent or permissions not 0600!")
 		#sys.exit(1)
-        	LOGGER.debug("DEBUG: prompting for login credentials as we have a faulty file")
+        	LOGGER.debug("Prompting for login credentials as we have a faulty file")
 		s_username = raw_input(type + " Username: ")
 		s_password = getpass.getpass(type + " Password: ")
 		return (s_username, s_password)
     elif type.upper()+"_LOGIN" in os.environ and type.upper()+"_PASSWORD" in os.environ:
 	# shell variables
-	LOGGER.debug("DEBUG: checking shell variables")
+	LOGGER.debug("Checking shell variables")
 	return (os.environ[type.upper()+"_LOGIN"], os.environ[type.upper()+"_PASSWORD"])
     else:
 	# prompt user
-	LOGGER.debug("DEBUG: prompting for login credentials")
+	LOGGER.debug("Prompting for login credentials")
 	s_username = raw_input(type + " Username: ")
 	s_password = getpass.getpass(type + " Password: ")
 	return (s_username, s_password)
@@ -116,9 +116,9 @@ def is_downtime(url, monUsername, monPassword, host, agent, noAuth=False):
 	#send GET request
 	r = s.get(url+"/cgi-bin/status.cgi?host=all&hostprops=1&style=hostdetail", headers=myHeaders)
 	try:
-		LOGGER.debug("result: {0}".format(r.text))
+		LOGGER.debug("Result: {0}".format(r.text))
 	except:
-		LOGGER.debug("result: none - check URL/authentification method!")
+		LOGGER.debug("Result: none - check URL/authentification method!")
 	
 	#check whether request was successful
 	if r.status_code != 200:
@@ -163,9 +163,9 @@ def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent
 	#send POST request
 	r = s.post(url+"/cgi-bin/cmd.cgi", data=payload, headers=myHeaders)
 	try:
-		LOGGER.debug("result: {0}".format(r.text))
+		LOGGER.debug("Result: {0}".format(r.text))
 	except:
-		LOGGER.debug("result: none - check URL/authentification method!")
+		LOGGER.debug("Result: none - check URL/authentification method!")
 	
 	#check whether request was successful
 	if r.status_code != 200:
