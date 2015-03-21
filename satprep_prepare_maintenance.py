@@ -74,7 +74,7 @@ def verify():
 			else:
 				#get default login if not in cache
 				if defaultMonUser == "": (defaultMonUser, defaultMonPass) = get_credentials("Monitoring", options.monAuthfile)
-				result = is_downtime(options.URL, defaultMonUser, defaulMonPass, thisHost, options.userAgent, options.noAuth)
+				result = is_downtime(options.URL, defaultMonUser, defaultMonPass, thisHost, options.userAgent, options.noAuth)
 			
 			if result:
 				#host in downtime
@@ -95,7 +95,7 @@ def verify():
 				thisURI = host[host.find("@")+1:host.rfind(":")]
 				thisCred = host[host.rfind(":")+1:]
 				thisHost = host[:host.find("@")]
-				LOGGER.debug("Found differing host/crendials combination for VM '" + thisHost + "' - Monitoring URL: '" + thisURI + "', credentials: '" + thisCred + "'")
+				LOGGER.debug("Found differing host/crendials combination for VM '" + thisHost + "' - Virtualization URL: '" + thisURI + "', credentials: '" + thisCred + "'")
 			else:
 				thisURI = ""
 				thisCred = ""

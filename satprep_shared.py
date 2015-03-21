@@ -114,7 +114,7 @@ def is_downtime(url, monUsername, monPassword, host, agent, noAuth=False):
 	if noAuth == False: s.auth = HTTPBasicAuth(monUsername, monPassword)
 	
 	#send GET request
-	r = s.get(url+"/cgi-bin/status.cgi?host=all&hostprops=1&style=hostdetail", headers=myHeaders)
+	r = s.get(url+"/cgi-bin/status.cgi?host=all&hostprops=1&style=hostdetail", headers=myHeaders, verify=False)
 	try:
 		LOGGER.debug("Result: {0}".format(r.text))
 	except:
@@ -161,7 +161,7 @@ def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent
 	if noAuth == False: s.auth = HTTPBasicAuth(monUsername, monPassword)
 	
 	#send POST request
-	r = s.post(url+"/cgi-bin/cmd.cgi", data=payload, headers=myHeaders)
+	r = s.post(url+"/cgi-bin/cmd.cgi", data=payload, headers=myHeaders, verify=False)
 	try:
 		LOGGER.debug("Result: {0}".format(r.text))
 	except:
