@@ -17,6 +17,7 @@ import csv
 from satprep_shared import schedule_downtime, get_credentials, create_snapshot, is_downtime, has_snapshot
 import time
 import os
+from fnmatch import fnmatch
 
 #set logger
 LOGGER = logging.getLogger('satprep_prepare_maintenance')
@@ -33,7 +34,17 @@ defaultVirtPass=""
 
 
 
+def is_blacklisted(name, list):
+	#check whether system is blacklisted
+	for entry in list:
+		LOGGER.debug("Checking whether {name} is blacklisted by *{entry}*".format(name=name, entry=entry))
+		if fnmatch(name.lower(), "*{seek}*".format(seek=entry.lower()) ): return True
+	return False
+
+
+
 def verify():
+	#verify snapshots and downtimes
 	global downtimeHosts
 	global snapshotHosts
 	global myPrefix
@@ -124,7 +135,7 @@ def verify():
 
 
 def setDowntimes():
-	#some globale variables
+	#set downtimes
 	global defaultMonUser
 	global defaultMonPass
 	
@@ -185,7 +196,7 @@ def setDowntimes():
 
 
 def createSnapshots():
-	#some globale variables
+	#create snapshots
 	global defaultVirtUser
 	global defaultVirtPass
 	
@@ -281,7 +292,7 @@ def readFile(file):
 				if (row[repcols["system_prod"]] == "1" and options.nonprodOnly == False) \
 				or (row[repcols["system_prod"]] != "1" and options.prodOnly == False) \
 				or (options.prodOnly == False and options.nonprodOnly == False):
-					if row[repcols["hostname"]].lower() not in options.exclude: downtimeHosts.append(this_name)
+					if is_blacklisted(row[repcols["hostname"]], options.exclude) == False: downtimeHosts.append(this_name)
 					LOGGER.debug("Downtime will be scheduled for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 				
 				#virtualization, add custom name if defined
@@ -292,7 +303,7 @@ def readFile(file):
 				if (row[repcols["system_prod"]] == "1" and options.nonprodOnly == False) \
 				or (row[repcols["system_prod"]] != "1" and options.prodOnly == False) \
 				or (options.prodOnly == False and options.nonprodOnly == False):
-					if row[repcols["hostname"]].lower() not in options.exclude: snapshotHosts.append(this_name)
+					if is_blacklisted(row[repcols["hostname"]], options.exclude) == False: snapshotHosts.append(this_name)
 					LOGGER.debug("Snapshot will be created for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 				else:
 					LOGGER.debug("Script parameters are avoiding creating snapshot for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
@@ -307,7 +318,7 @@ def readFile(file):
 					if (row[repcols["system_prod"]] == "1" and options.nonprodOnly == False) \
 					or (row[repcols["system_prod"]] != "1" and options.prodOnly == False) \
 					or (options.prodOnly == False and options.nonprodOnly == False):
-						if row[repcols["hostname"]].lower() not in options.exclude: downtimeHosts.append(this_name)
+						if is_blacklisted(row[repcols["hostname"]], options.exclude) == False: downtimeHosts.append(this_name)
 						LOGGER.debug("Downtime will be scheduled for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 					else: LOGGER.debug("Script parameters are avoiding scheduling downtime for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 				
@@ -321,7 +332,7 @@ def readFile(file):
 					if (row[repcols["system_prod"]] == "1" and options.nonprodOnly == False) \
 					or (row[repcols["system_prod"]] != "1" and options.prodOnly == False) \
 					or (options.prodOnly == False and options.nonprodOnly == False):
-						if row[repcols["hostname"]].lower() not in options.exclude: snapshotHosts.append(this_name)
+						if is_blacklisted(row[repcols["hostname"]], options.exclude) == False: snapshotHosts.append(this_name)
 						LOGGER.debug("Snapshot will be created for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 					else:
 						LOGGER.debug("Script parameters are avoiding creating snapshot for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
@@ -353,6 +364,10 @@ def main(options):
 		#schedule downtimes and create snapshots
 		if options.skipMonitoring == False: setDowntimes()
 		if options.skipSnapshot == False: createSnapshots()
+		#also verify
+		if options.dryrun == False:
+			LOGGER.info("Verifying preparation...")
+			verify()
 
 
 
@@ -360,7 +375,7 @@ def parse_options(args=None):
 	if args is None:
 		args = sys.argv
 	
-	# define usage, description, version and load parser
+	#define usage, description, version and load parser
 	usage = "usage: %prog [options] snapshot.csv"
 	desc = '''%prog is used to prepare maintenance for systems managed with Spacewalk, Red Hat Satellite or SUSE Manager. This includes (un)scheduling downtimes in Nagios, Icinga and Shinken and creating/removing snapshots of virtual machines. As this script uses libvirt multiple hypervisors are supported (see GitHub and libvirt documenation). Login credentials are assigned using the following shell variables:
 	SATELLITE_LOGIN	username for Satellite
@@ -436,9 +451,11 @@ def parse_options(args=None):
 	
 	#tell user that he's a funny guy
 	if (
-		(options.skipSnapshot and options.skipMonitoring)
+		(options.skipSnapshot == True and options.skipMonitoring == True)
 		or
 		(options.prodOnly == True and options.nonprodOnly == True)
+		or
+		(options.dryrun == True and options.verifyOnly == True)
 	):
 		print "Haha, you're funny."
 		exit(1)
