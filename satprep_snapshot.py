@@ -18,6 +18,7 @@ import time
 import xmlrpclib
 from optparse import OptionParser, OptionGroup
 from satprep_shared import check_if_api_is_supported, get_credentials
+from unidecode import unidecode
 
 
 
@@ -76,6 +77,8 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 	#snapOpts.add_option("-f", "--field", action="append", type="choice", dest="fields", choices=POSSIBLE_FIELDS, metavar="FIELDS", help="defines which fields should be integrated in the report (default: all available)")
 	#-p / --include-patches
 	snapOpts.add_option("-p", "--include-patches", action="store_true", default=False, dest="includePatches", help="defines whether package updates that are not part of an erratum shall be included (default: no)")
+	#-l / --include-locked
+	snapOpts.add_option("-l", "--include-locked", action="store_true", default=False, dest="includeLocked", help="also includes locked systems (default: no)")
 
 	(options, args) = parser.parse_args(args)
 
@@ -98,8 +101,9 @@ def main(options):
 	sattelite_url = "http://{0}/rpc/api".format(options.server)
 	client = xmlrpclib.Server(sattelite_url, verbose=options.debug)
 	key = client.auth.login(username, password)
-
 	check_if_api_is_supported(client)
+	
+	if options.includeLocked: LOGGER.warning("Snapshot report will also include information about locked systems")
 
 	#check whether the output directory/file is writable
 	if os.access(os.path.dirname(options.output), os.W_OK) or os.access(os.getcwd(), os.W_OK):
@@ -110,7 +114,6 @@ def main(options):
 		writer = csv.writer(open(options.output, "w"), 'default')
 
 		#create header and scan _all_ the systems
-		#writer.writerow(options.fields)
 		writer.writerow(DEFAULT_FIELDS)
 		systems = client.system.listSystems(key)
 		#counter variable for XMLRPC timeout workaround (https://github.com/stdevel/satprep/issues/5)
@@ -156,21 +159,37 @@ def process_errata(client, key, writer, system):
 		"errata_date": "update_date"
 	}
 	
+	#break if system locked
+	details = client.system.getDetails(key, system["id"])
+	if details["lock_status"] != False and options.includeLocked == False:
+		LOGGER.info("Skipping errata for locked host "
+			"{system[name]} (SID {system[id]})...".format(
+				system=system
+			)
+		)
+		return
+	
 	#TODO: errata_* not working! Implemented a workaround (looking for a "nicer" way to do this)
 	
 	errata = client.system.getRelevantErrata(key, system["id"])
 	if not errata:
-		LOGGER.info("Host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
+		LOGGER.debug("Host {0[name]} (SID {0[id]}) has no relevant errata.".format(system))
 		return
+	else:
+		LOGGER.info("Looking at relevant errata for host "
+			"{system[name]} (SID {system[id]})...".format(
+				system=system
+			)
+		)
 
 	for i, erratum in enumerate(errata, start=1):
-		LOGGER.info("Having a look at relevant errata #{errata} "
+		LOGGER.debug("Having a look at relevant errata #{errata} "
 			"for host {system[name]} (SID {system[id]})...".format(
 				errata=i,
 				system=system
 			)
 		)
-
+		
 		valueSet = []
 		for column in DEFAULT_FIELDS:
 			try:
@@ -178,7 +197,7 @@ def process_errata(client, key, writer, system):
 				LOGGER.debug("Translated column '" + column + "' in '" + columnErrataMapping[column] + "'") 
 				continue
 			except KeyError:
-				# Key not found - probably needs more logic.
+				#Key not found - probably needs more logic.
 				LOGGER.debug("Could not find column '" + column + "' in columnErrataMapping")
 				pass
 			
@@ -286,7 +305,7 @@ def process_errata(client, key, writer, system):
 					and temp["SYSTEM_MONITORING_HOST"] != "" and
 					"SYSTEM_MONITORING_HOST_AUTH" in temp and
 					temp["SYSTEM_MONITORING_HOST_AUTH"] != ""):
-						temp_vmname = temp_vmname + "@" + temp["SYSTEM_MONITORING_HOST"] + ":" + temp["SYSTEM_MONITORING_HOST_AUTH"]
+						temp_monname = temp_monname + "@" + temp["SYSTEM_MONITORING_HOST"] + ":" + temp["SYSTEM_MONITORING_HOST_AUTH"]
 					valueSet.append(temp_monname)
 				else:
 					valueSet.append("")
@@ -323,6 +342,14 @@ def process_errata(client, key, writer, system):
 				else:
 					valueSet.append("")
 
+		#replace unicodes
+		for i,field in enumerate(valueSet):
+			if type(field) is unicode:
+				LOGGER.debug("Converted to ascii: {ascii}".format(
+					ascii=unidecode(field)
+				))
+				valueSet[i] = str(unidecode(field))
+		
 		writer.writerow(valueSet)
 
 
@@ -330,22 +357,38 @@ def process_errata(client, key, writer, system):
 def process_patches(client, key, writer, system):
 	updates = client.system.listLatestUpgradablePackages(key, system["id"])
 
+	#break if system locked
+	details = client.system.getDetails(key, system["id"])
+	if details["lock_status"] != False and options.includeLocked == False:
+		LOGGER.info("Skipping patches for locked host "
+			"{system[name]} (SID {system[id]})...".format(
+				system=system
+			)
+		)
+		return
+	
 	if not updates:
 		LOGGER.debug("Host {0[name]} (SID {0[id]}) has no relevant updates.".format(system))
 		return
+	else:
+		LOGGER.info("Looking at relevant package updates for host "
+			"{system[name]} (SID {system[id]})...".format(
+				system=system
+			)
+		)
 
 	for i, update in enumerate(updates, start=1):
-		LOGGER.info("Having a look at relevant package update "
+		LOGGER.debug("Having a look at relevant package update "
 			"#{update} for host {system[name]} "
 			"(SID {system[id]})...".format(
 				update=i,
 				system=system
 			)
 		)
-
+		
 		if client.packages.listProvidingErrata(key, update["to_package_id"]):
-			# We only add update information if it is not not
-			# already displayed as part of an erratum
+			#We only add update information if it is not not
+			#already displayed as part of an erratum
 			LOGGER.debug("Dropping update {0[name]} "
 				"({0[to_package_id]}) as it's already part of "
 				"an erratum.".format(update)
@@ -353,7 +396,6 @@ def process_patches(client, key, writer, system):
 			continue
 
 		valueSet = []
-		#for column in options.fields:
 		for column in DEFAULT_FIELDS:
 			if column == "hostname":
 				valueSet.append(system["name"])
@@ -438,7 +480,7 @@ def process_patches(client, key, writer, system):
 					and temp["SYSTEM_MONITORING_HOST"] != "" and
 					"SYSTEM_MONITORING_HOST_AUTH" in temp and
 					temp["SYSTEM_MONITORING_HOST_AUTH"] != ""):
-						temp_vmname = temp_vmname + "@" + temp["SYSTEM_MONITORING_HOST"] + ":" + temp["SYSTEM_MONITORING_HOST_AUTH"]
+						temp_monname = temp_monname + "@" + temp["SYSTEM_MONITORING_HOST"] + ":" + temp["SYSTEM_MONITORING_HOST_AUTH"]
 					valueSet.append(temp_monname)
 				else:
 					valueSet.append("")
