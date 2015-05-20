@@ -14,7 +14,7 @@ import logging
 import sys
 from optparse import OptionParser, OptionGroup
 import csv
-from satprep_shared import schedule_downtime, get_credentials, create_snapshot, is_downtime, has_snapshot
+from satprep_shared import schedule_downtime, get_credentials, create_snapshot, is_downtime, has_snapshot, schedule_downtime_hostgroup
 import time
 import os
 from fnmatch import fnmatch
@@ -56,14 +56,17 @@ def verify():
         #check whether the output directory/file is writable
         if os.access(os.getcwd(), os.W_OK):
 		LOGGER.debug("Output file/directory writable!")
-		myLog = open(myPrefix+"_satprep.vlog", "w")
+		myLog = open(myPrefix+"_satprep.vlog", "r+")
+		#myFile = myLog.readlines()
+		myFile = myLog.read().splitlines()
+		LOGGER.debug("vlog before customization: ***\n" + str(myFile))
 	else:
 		#directory not writable
 		LOGGER.error("Output directory NOT writable!")
 		sys.exit(1)
 	
 	#check downtimes
-	if len(downtimeHosts) == 0: LOGGER.info("No downtimes to schedule.")
+	if len(downtimeHosts) == 0 or options.skipMonitoring: LOGGER.info("No downtimes to verify.")
 	else:
 		#check _all_ the downtimes
 		for host in downtimeHosts:
@@ -90,17 +93,22 @@ def verify():
 			if result:
 				#host in downtime
 				LOGGER.debug("Host '" + thisHost + "' in downtime. :)")
-				myLog.write("MONOK;" + thisHost + "\n")
+				#correct or append entry
+				if "MONCRIT;"+thisHost in myFile and "MONOK;"+thisHost not in myFile: myFile = [h.replace("MONCRIT;"+thisHost, "MONOK;"+thisHost) for h in myFile]
+				elif "MONOK;"+thisHost not in myFile: myFile.append("MONOK;"+thisHost)
 			else:
 				#host NOT in downtime
 				LOGGER.error("Host '" + thisHost + "' NOT in downtime. :(")
-				myLog.write("MONCRIT;" + thisHost + "\n")
+				#correct or append entry
+				if "MONOK;"+thisHost in myFile and "MONCRIT;"+thisHost not in myFile: myFile = [h.replace("MONOK;"+thisHost, "MONCRIT;"+thisHost) for h in myFile]
+				elif "MONCRIT;"+thisHost not in myFile: myFile.append("MONCRIT;"+thisHost)
 	
 	#check snapshots
-	if len(snapshotHosts) == 0: LOGGER.info("No snapshots to create.")
+	if len(snapshotHosts) == 0 or options.skipSnapshot: LOGGER.info("No snapshots to verify.")
 	else:
 		#check _all_ the snapshots
 		for host in snapshotHosts:
+			LOGGER.debug("Checking snapshot for host '" + host + "'...")
 			#try to get differing host/credentials
 			if "@" in host and ":" in host:
 				thisURI = host[host.find("@")+1:host.rfind(":")]
@@ -124,12 +132,20 @@ def verify():
 			if result:
 				#snapshot exists
 				LOGGER.debug("Snapshot for VM '" + thisHost + "' found. :)")
-				myLog.write("SNAPOK;" + thisHost + "\n")
+				#correct or append entry
+				if "SNAPCRIT;"+thisHost in myFile and "SNAPOK;"+thisHost not in myFile: myFile = [h.replace("SNAPCRIT;"+thisHost, "SNAPOK;"+thisHost) for h in myFile]
+				elif "SNAPOK;"+thisHost not in myFile: myFile.append("SNAPOK;"+thisHost)
 			else:
 				#snapshot non-existent
 				LOGGER.error("No snapshot for VM '" + thisHost + "' found. :(")
-				myLog.write("SNAPCRIT;" + thisHost + "\n")
-	#close log file
+				#correct or append entry
+				if "SNAPOK;"+thisHost in myFile and "SNAPCRIT;"+thisHost not in myFile: myFile = [h.replace("SNAPOK;"+thisHost, "SNAPCRIT;"+thisHost) for h in myFile]
+				elif "SNAPCRIT;"+thisHost not in myFile: myFile.append("SNAPCRIT;"+thisHost)
+	#write vlog file
+	myLog.seek(0)
+	LOGGER.debug("File after customization: ***\n" + str(myFile))
+	for line in myFile:
+		myLog.write(line + "\n")
 	myLog.close()
 
 
@@ -143,6 +159,21 @@ def setDowntimes():
 	if len(downtimeHosts) == 0:
 		LOGGER.info("No downtimes to schedule, going home!")
 		return False
+	
+	#schedule downtimes for hostgroups if given
+	if len(options.downtimeHostgroups) != 0 and options.tidy == False:
+		if options.dryrun:
+			#simulation
+			for thisHostgroup in options.downtimeHostgroups:
+				LOGGER.info("I'd like to schedule downtime for hostgroup '" + thisHostgroup + "'...")
+		else:
+			#schedule _all_ the downtimes
+			for thisHostgroup in options.downtimeHostgroups:
+				LOGGER.info("Scheduling downtime for hostgroup '" + thisHostgroup + "'...")
+				#get default login if not specified
+				if defaultMonUser == "": (defaultMonUser, defaultMonPass) = get_credentials("Monitoring", options.monAuthfile)
+				result = schedule_downtime_hostgroup(options.URL, defaultMonUser, defaultMonPass, thisHostgroup, options.hours, options.comment, options.userAgent, options.noAuth)
+		return True
 	
 	#set downtime for affected hosts
 	for host in downtimeHosts:
@@ -178,10 +209,6 @@ def setDowntimes():
 			if thisURI != "": output = output + "' (using " + thisURI + " - " + thisCred + ")..."
 			else: output = output + "'..."
 			LOGGER.info(output)
-			
-			#setup headers
-			if len(options.userAgent) > 0: myHeaders = {'User-Agent': options.userAgent}
-			else: myHeaders = {'User-Agent': 'satprep Toolkit (https://github.com/stdevel/satprep)'}
 			
 			#(un)schedule downtime
 			if thisURI != "" and thisCred != "":
@@ -361,9 +388,9 @@ def main(options):
 		#verify only
 		verify()
 	else:
-		#schedule downtimes and create snapshots
-		if options.skipMonitoring == False: setDowntimes()
+		#create snapshots and schedule downtimes
 		if options.skipSnapshot == False: createSnapshots()
+		if options.skipMonitoring == False: setDowntimes()
 		#also verify
 		if options.dryrun == False:
 			LOGGER.info("Verifying preparation...")
@@ -387,7 +414,7 @@ def parse_options(args=None):
 	
 	Check-out the GitHub documentation (https://github.com/stdevel/satprep) for further information.
 	'''
-	parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3")
+	parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.3")
 	#define option groups
 	genOpts = OptionGroup(parser, "Generic Options")
 	monOpts = OptionGroup(parser, "Monitoring Options")
@@ -428,11 +455,13 @@ def parse_options(args=None):
 	#-u / --monitoring-url
 	monOpts.add_option("-u", "--monitoring-url", dest="URL", metavar="URL", default="http://localhost/icinga", help="defines the default Nagios/Icinga/Thruk/Shinken URL to use, might be overwritten by custom system keys (default: http://localhost/icinga)")
 	#-t / --hours
-	monOpts.add_option("-t", "--hours", action="store", dest="hours", default="2", metavar="HOURS", help="sets the time period in hours hosts should be scheduled for downtime (default: 2)")
+	monOpts.add_option("-t", "--hours", action="store", dest="hours", default="4", metavar="HOURS", help="sets the time period in hours hosts should be scheduled for downtime (default: 4)")
 	#-x / --no-auth
 	monOpts.add_option("-x", "--no-auth", action="store_true", default=False, dest="noAuth", help="disables HTTP basic auth (default: no)")
 	#-A / --user-agent
 	monOpts.add_option("-A", "--user-agent", action="store", default="", metavar="AGENT", dest="userAgent", help="sets a custom HTTP user agent")
+	#-g / --downtime-hostgroup
+	monOpts.add_option("-g", "--downtime-hostgroup", action="append", type="string", default=[], metavar="HOSTGROUP", dest="downtimeHostgroups", help="defines hostgroups which should be scheduled for downtime. NOTE: This disables scheduling downtime for particular hosts.")
 	
 	#VM OPTIONS
 	#-K / --skip-snapshot

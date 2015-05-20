@@ -169,13 +169,54 @@ def schedule_downtime(url, monUsername, monPassword, host, hours, comment, agent
 	
 	#check whether request was successful
 	if r.status_code != 200:
-		LOGGER.error("Got HTTP status code " + str(r.status_code) + " instead of 200 while scheduling downtime for host '" + host + "'. Check URL and logon credentials!")
+		LOGGER.error("Got HTTP status code " + str(r.status_code) + " instead of 200 while (un)scheduling downtime for host '" + host + "'. Check URL and logon credentials!")
 		return False
 	else:
 		if "error" in r.text.lower(): LOGGER.error("Unable to (un)schedule downtime for host '" + host + "' - please run again with -d / --debug and check HTML output! (does this host exist?!)")
 		else:
 			if unschedule: print "Successfully unscheduled downtime for host '" + host + "'"
 			else: print "Successfully scheduled downtime for host '" + host + "'"
+		return True
+
+
+
+def schedule_downtime_hostgroup(url, monUsername, monPassword, hostgroup, hours, comment, agent="", noAuth=False):
+#schedule downtime for hostgroup
+	#setup headers
+	if len(agent) > 0: myHeaders = {'User-Agent': agent}
+	else: myHeaders = {'User-Agent': 'satprep Toolkit (https://github.com/stdevel/satprep)'}
+	LOGGER.debug("Setting headers: {0}".format(myHeaders))
+	
+	#setup start and end time for downtime
+	current_time=time.strftime("%Y-%m-%d %H:%M:%S")
+	end_time=format(datetime.now() + timedelta(hours=int(hours)), '%Y-%m-%d %H:%M:%S')
+	LOGGER.debug("current_time: {0}".format(current_time))
+	LOGGER.debug("end_time: {0}".format(end_time))
+
+	#setup payload
+	#NOTE: there is no way to unschedule downtimes for all hosts/services in a hostgroup
+	payload = {'cmd_typ': '85', 'cmd_mod': '2', 'hostgroup': hostgroup, 'com_data': comment, 'trigger': '0', 'fixed': '1', 'hours': hours, 'minutes': '0', 'start_time': current_time, 'end_time': end_time, 'btnSubmit': 'Commit', 'com_author': monUsername, 'childoptions': '0', 'ahas': 'on'}
+	LOGGER.debug("payload: {0}".format(payload))
+
+	#setup HTTP session
+	s = requests.Session()
+	if noAuth == False: s.auth = HTTPBasicAuth(monUsername, monPassword)
+
+	#send POST request
+	r = s.post(url+"/cgi-bin/cmd.cgi", data=payload, headers=myHeaders, verify=False)
+	try:
+		LOGGER.debug("Result: {0}".format(r.text))
+	except:
+		LOGGER.debug("Result: none - check URL/authentification method!")
+
+	#check whether request was successful
+	if r.status_code != 200:
+		LOGGER.error("Got HTTP status code " + str(r.status_code) + " instead of 200 while scheduling downtime for hostgroup '" + hostgroup + "'. Check URL and logon credentials!")
+		return False
+	else:
+		if "error" in r.text.lower(): LOGGER.error("Unable to schedule downtime for hostgroup '" + hostgroup + "' - please run again with -d / --debug and check HTML output! (does this host exist?!)")
+		else:
+			print "Successfully scheduled downtime for hostgroup '" + hostgroup + "'"
 		return True
 
 

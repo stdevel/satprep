@@ -204,7 +204,7 @@ def parse_options(args=None):
 	It is also possible to create an authfile (permissions 0600) for usage with this script (parameters -a/-A). The first line needs to contain the username, the second line should consist of the appropriate password.
 	If you're not defining variables or an authfile you will be prompted to enter your login information.
 	Checkout the GitHub wiki for further information: https://github.com/stdevel/satprep/wiki'''
-	parser = OptionParser(description=desc, version="%prog version 0.3")
+	parser = OptionParser(description=desc, version="%prog version 0.3.3")
 	
 	#define option groups
 	genOpts = OptionGroup(parser, "Generic Options")
