@@ -47,7 +47,7 @@ It is also possible to create an authfile (permissions 0600) for usage with this
 If you're not defining variables or an authfile you will be prompted to enter your login information.
 
 Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-	parser = OptionParser(description=desc, version="%prog version 0.3.3")
+	parser = OptionParser(description=desc, version="%prog version 0.3.4")
 	#define option groups
 	genOpts = OptionGroup(parser, "Generic Options")
 	parser.add_option_group(genOpts)

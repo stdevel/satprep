@@ -14,10 +14,11 @@ import logging
 import sys
 from optparse import OptionParser, OptionGroup
 import csv
-from satprep_shared import schedule_downtime, get_credentials, create_snapshot, is_downtime, has_snapshot, schedule_downtime_hostgroup
+from satprep_shared import schedule_downtime, get_credentials, create_snapshot, is_downtime, has_snapshot, schedule_downtime_hostgroup, is_blacklisted
 import time
 import os
-from fnmatch import fnmatch
+
+
 
 #set logger
 LOGGER = logging.getLogger('satprep_prepare_maintenance')
@@ -31,15 +32,6 @@ defaultMonUser=""
 defaultMonPass=""
 defaultVirtUser=""
 defaultVirtPass=""
-
-
-
-def is_blacklisted(name, list):
-	#check whether system is blacklisted
-	for entry in list:
-		LOGGER.debug("Checking whether {name} is blacklisted by *{entry}*".format(name=name, entry=entry))
-		if fnmatch(name.lower(), "*{seek}*".format(seek=entry.lower()) ): return True
-	return False
 
 
 
@@ -306,8 +298,6 @@ def readFile(file):
 	with open(file, 'rb') as csvfile:
 		filereader = csv.reader(csvfile, delimiter=';', quotechar='|')
 		for row in filereader:
-			#LOGGER.debug("hostname: " + row[repcols["hostname"]] + "; system_prod:" + row[repcols["system_prod"]] + "; system_monitoring:" + row[repcols["system_monitoring"]] + "; system_monitoring_name:" + row[repcols["system_monitoring_name"]] + "; system_virt_vmname:" + row[repcols["system_virt_vmname"]] + "; system_virt_snapshot:" + row[repcols["system_virt_snapshot"]])
-			
 			if options.noIntelligence == True:
 				#simply add the damned host
 				
@@ -414,7 +404,7 @@ def parse_options(args=None):
 	
 	Check-out the GitHub documentation (https://github.com/stdevel/satprep) for further information.
 	'''
-	parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.3")
+	parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.4")
 	#define option groups
 	genOpts = OptionGroup(parser, "Generic Options")
 	monOpts = OptionGroup(parser, "Monitoring Options")
@@ -488,6 +478,9 @@ def parse_options(args=None):
 	):
 		print "Haha, you're funny."
 		exit(1)
+	
+	#expand excluded hosts
+	if len(options.exclude) == 1: options.exclude = str(options.exclude).strip("[]'").split(",")	
 	
 	return (options, args)
 

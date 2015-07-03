@@ -11,6 +11,7 @@ from requests.auth import HTTPBasicAuth
 import time
 from datetime import datetime, timedelta
 import libvirt
+from fnmatch import fnmatch
 
 
 
@@ -19,7 +20,7 @@ LIBVIRT_USERNAME=""
 LIBVIRT_PASSWORD=""
 
 LOGGER =  logging.getLogger('satprep-shared')
-SUPPORTED_API_LEVELS = ["11.1", "12", "13", "13.0", "14", "14.0", "15", "15.0"]
+SUPPORTED_API_LEVELS = ["11.1", "12", "13", "13.0", "14", "14.0", "15", "15.0", "16", "16.0"]
 
 
 
@@ -249,7 +250,6 @@ def get_libvirt_credentials(credentials, user_data):
 
 
 
-#def create_snapshot(virtURI, virtUsername, virtPassword, hostUsername, hostPassword, vmName, name, comment, remove=False):
 def create_snapshot(virtURI, hostUsername, hostPassword, vmName, name, comment, remove=False):
 #create/remove snapshot
 	#authentificate
@@ -285,3 +285,19 @@ def create_snapshot(virtURI, hostUsername, hostPassword, vmName, name, comment, 
 		else:
 			LOGGER.error("Unable to create snapshot: '" + str(e) + "'")
 		return False
+
+
+
+def is_blacklisted(name, list):
+	#check whether system is blacklisted
+	for entry in list:
+		LOGGER.debug("Checking whether {name} is blacklisted by *{entry}*".format(name=name, entry=entry))
+		if fnmatch(name.lower(), "*{seek}*".format(seek=entry.lower()) ): return True
+	return False
+
+
+
+def get_systems_by_systemgroup(client, key, group):
+#get systems by system group
+	systems = client.systemgroup.listSystems(key, group)
+	LOGGER.debug(systems)
