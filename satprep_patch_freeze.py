@@ -280,7 +280,7 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 	#-l / --label
 	chnOpts.add_option("-l", "--label", action="store", dest="targetLabel", metavar="LABEL", default="satprep", help="defines a label for the cloned channel (e.g. application name)")
 	#-D / --date
-	chnOpts.add_option("-D", "--date", action="store", dest="targetDate", metavar="DATE", default="wingardiumleviosa", help="defines the patches should be freezed (default: current date)")
+	chnOpts.add_option("-D", "--date", action="store", dest="targetDate", metavar="DATE", default="wingardiumleviosa", help="defines the date patches should be freezed (default: current date)")
 	
         (options, args) = parser.parse_args(args)
         return (options, args)
