@@ -41,8 +41,8 @@ def getChannels(client, key):
 		if group in satGroups:
 			groupHosts = client.systemgroup.listSystems(key, group)
 			for host in groupHosts:
-				tempHosts.append(host["hostname"])
-				LOGGER.debug("Adding system '{0}'".format(host["hostname"]))
+				tempHosts.append(host["profile_name"])
+				LOGGER.debug("Adding system '{0}'".format(host["profile_name"]))
 		else: LOGGER.error("Group '{0}' appears not to be a valid group".format(group))
 	#removing blacklisted
 	for host in tempHosts:
@@ -262,7 +262,7 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 	#-a / --authfile
 	srvOpts.add_option("-a", "--authfile", dest="authfile", metavar="FILE", default="", help="defines an auth file to use instead of shell variables")
 	#-s / --server
-	srvOpts.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use")
+	srvOpts.add_option("-s", "--server", dest="server", metavar="SERVER", default="localhost", help="defines the server to use (default: localhost)")
 	
 	#SYSTEM OPTIONS
 	#-S / --system
