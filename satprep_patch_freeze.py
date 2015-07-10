@@ -37,7 +37,6 @@ def getChannels(client, key):
 		if len(client.system.getId(key, host)) != 0: tempHosts.append(host)
 		else: LOGGER.error("System '{0}' appears not to be a valid host".format(host))
 	for group in options.targetGroups:
-		#if len(groupHosts) != 0:
 		if group in satGroups:
 			groupHosts = client.systemgroup.listSystems(key, group)
 			for host in groupHosts:
@@ -62,9 +61,7 @@ def getChannels(client, key):
 			LOGGER.debug("This system's profile ID: {0}".format(hostId))
 			baseChannel = client.system.getSubscribedBaseChannel(key, hostId[0]["id"])
 			cleanBase = baseChannel["label"]
-			if "-satprep" in cleanBase: cleanBase = cleanBase[:cleanBase.find("-satprep")]
-			#LOGGER.debug(baseChannel)
-			#if baseChannel["label"] not in myChannels:
+			if ".sp" in cleanBase: cleanBase = cleanBase[:cleanBase.find(".sp")]
 			if cleanBase not in myChannels:
 				#channel non-present
 				LOGGER.debug("Adding channel '{0}'".format(cleanBase))
@@ -73,7 +70,7 @@ def getChannels(client, key):
 			childChannels = client.system.listSubscribedChildChannels(key, hostId[0]["id"])
 			for channel in childChannels:
 				cleanChild = channel["label"]
-				if "-satprep" in cleanChild: cleanChild = cleanChild[:cleanChild.find("-satprep")]
+				if ".sp" in cleanChild: cleanChild = cleanChild[:cleanChild.find(".sp")]
 				if cleanChild not in myChannels[cleanBase]:
 					LOGGER.debug("Adding child-channel '{0}'".format(cleanChild))
 					myChannels[cleanBase].append(cleanChild)
@@ -81,7 +78,6 @@ def getChannels(client, key):
 			if options.allSubchannels:
 				childChannels = client.system.listSubscribableChildChannels(key, hostId[0]["id"])
 				for channel in childChannels:
-					#if channel["label"] not in myChannels[cleanBase]:
 					if cleanChild not in myChannels[cleanBase]:
 						LOGGER.debug("Adding non-subscribed child-channel '{0}'".format(cleanChild))
 						myChannels[cleanBase].append(cleanChild)
@@ -98,47 +94,60 @@ def cloneChannels(client, key, date, label, unfreeze=False):
 		for channel in myChannels:
 			#remove child-channels
 			for child in myChannels[channel]:
-				if options.dryrun: LOGGER.info("I'd like to remove cloned child-channel '{0}'".format(child+"-"+options.targetLabel+"-"+options.targetDate))
+				if options.dryrun: LOGGER.info("I'd like to remove cloned child-channel '{0}'".format(child+"."+options.targetLabel+"-"+options.targetDate))
 				else:
 					try:
 						LOGGER.info("Deleting child-channel '{0}'".format(child+"-"+options.targetLabel+"-"+options.targetDate))
-						result = client.channel.software.delete(key, child+"-"+options.targetLabel+"-"+options.targetDate)
-					except: LOGGER.error("Unable to remove child-channel '{0}'!".format(child+"-"+options.targetLabel+"-"+options.targetDate))
+						result = client.channel.software.delete(key, child+"."+options.targetLabel+"-"+options.targetDate)
+					except xmlrpclib.Fault as e:
+						LOGGER.error("Unable to remove child-channel '{0}': '{1}'".format(child+"-"+options.targetLabel+"-"+options.targetDate, e.faultString))
+					except xmlrpclib.ProtocolError as e:
+						LOGGER.error("Unable to remove child-channel '{0}': '{1}'".format(child+"-"+options.targetLabel+"-"+options.targetDate, e.errmsg))
+					except:
+						LOGGER.error("Unable to remove child-channel '{0}'!".format(child+"-"+options.targetLabel+"-"+options.targetDate))
 		#remove base-channel
-		if options.dryrun: LOGGER.info("I'd like to remove cloned base-channel '{0}'".format(channel))
+		if options.dryrun: LOGGER.info("I'd like to remove cloned base-channel '{0}'".format(channel+"."+options.targetLabel+"-"+options.targetDate))
 		else:
 			try:
-				LOGGER.info("Deleting base-channel '{0}'".format(channel))
-				result = client.channel.software.delete(key, channel+"-"+options.targetLabel+"-"+options.targetDate)
+				LOGGER.info("Deleting base-channel '{0}'".format(channel+"."+options.targetLabel+"-"+options.targetDate))
+				result = client.channel.software.delete(key, channel+"."+options.targetLabel+"-"+options.targetDate)
 			except: LOGGER.error("Unable to remove base-channel '{0}'!".format(channel))
 		return True
 	
 	#clone channels
 	for channel in myChannels:
 		#clone base-channels
-		if options.dryrun: LOGGER.info("I'd like to clone base-channel '{0}' as '{1}'".format(channel, channel+"-"+options.targetLabel+"-"+options.targetDate))
+		myargs={"name" : channel+" clone from "+options.targetDate, "label" : channel+"."+options.targetLabel+"-"+options.targetDate, "summary" : "Software channel cloned by Satprep"}
+		if options.dryrun:
+			LOGGER.info("I'd like to clone base-channel '{0}' as '{1}'".format(channel, channel+"."+options.targetLabel+"-"+options.targetDate))
 		else:
-			LOGGER.debug("Cloning base-channel '{0}' as '{1}'".format(channel, channel+"-"+options.targetLabel+"-"+options.targetDate))
-			myargs={"name" : channel+" clone from "+options.targetDate, "label" : channel+"-"+options.targetLabel+"-"+options.targetDate, "summary" : "Software channel cloned by Satprep"}
+			LOGGER.info("Cloning base-channel '{0}' as '{1}'".format(channel, channel+"."+options.targetLabel+"-"+options.targetDate))
 			try:
 				result = client.channel.software.clone(key, channel, myargs, False)
-				if result in [114,115]: LOGGER.debug("Cloned base-channel")
+				if result != 0: LOGGER.debug("Cloned base-channel")
+			except xmlrpclib.Fault as e:
+				LOGGER.error("Unable to clone base-channel: " + e.faultString)
+			except xmlrpclib.ProtocolError as e:
+				LOGGER.error("Unable to clone base-channel: " + e.errmsg)
 			except:
-				LOGGER.error("Unable to clone base-channel")
-				result=0
+				LOGGER.error("Unable to clone base-channel: " + str(sys.exc_info()[0]))
 		
 		#clone child-channels
 		for child in myChannels[channel]:
-			if options.dryrun: LOGGER.info("I'd like to clone child-channel '{0}' as '{1}'".format(child, child+"-"+options.targetLabel+"-"+options.targetDate))
+			myargs={"name" : child+" clone from "+options.targetDate, "label" : child+"."+options.targetLabel+"-"+options.targetDate, "summary" : "Software channel cloned by Satprep", "parent_label": channel+"."+options.targetLabel+"-"+options.targetDate}
+			if options.dryrun:
+				LOGGER.info("I'd like to clone child-channel '{0}' as '{1}'".format(child, child+"."+options.targetLabel+"-"+options.targetDate))
 			else:
-				LOGGER.info("Cloning child-channel '{0}' as '{1}'".format(child, child+"-"+options.targetLabel+"-"+options.targetDate))
-				myargs={"name" : child+" clone from "+options.targetDate, "label" : child+"-"+options.targetLabel+"-"+options.targetDate, "summary" : "Software channel cloned by Satprep", "parent_label": channel+"-"+options.targetLabel+"-"+options.targetDate}
+				LOGGER.info("Cloning child-channel '{0}' as '{1}'".format(child, child+"."+options.targetLabel+"-"+options.targetDate))
 				try:
 					result = client.channel.software.clone(key, child, myargs, False)
-					if result in [114,115]: LOGGER.debug("Cloned child-channel")
+					if result != 0: LOGGER.debug("Cloned child-channel")
+				except xmlrpclib.Fault as e:
+					LOGGER.error("Unable to clone base-channel: " + e.faultString)
+				except xmlrpclib.ProtocolError as e:
+					LOGGER.error("Unable to clone base-channel: " + e.errmsg)
 				except: 
-					LOGGER.error("Unable to clone child-channel")
-					result=0
+					LOGGER.error("Unable to clone child-channel: " + str(sys.exc_info()[0]))
 
 
 
@@ -152,8 +161,8 @@ def remapSystems(client, key, unfreeze=False):
 			myBase = client.system.getSubscribedBaseChannel(key, hostId[0]["id"])
 			if options.unfreeze:
 				myNewBase = myBase["label"]
-				myNewBase = myNewBase[:myNewBase.find("-satprep")]
-			else: myNewBase = myBase["label"]+"-"+options.targetLabel+"-"+options.targetDate
+				myNewBase = myNewBase[:myNewBase.find(".sp")]
+			else: myNewBase = myBase["label"]+"."+options.targetLabel+"-"+options.targetDate
 			
 			if options.dryrun: LOGGER.info("I'd like to remap {0}'s base-channel from {1} to {2}".format(system, myBase["label"], myNewBase))
 			else:
@@ -161,7 +170,9 @@ def remapSystems(client, key, unfreeze=False):
 					LOGGER.debug("Remapping {0}'s base-channel from {1} to {2}".format(system, myBase["label"], myNewBase))
 					result = client.system.setBaseChannel(key, hostId[0]["id"], myNewBase)
 					if result == 1: LOGGER.debug("Remapped system")
-				except:	LOGGER.error("Unable to change base-channel for system '{0}'".format(system))
+				except xmlrpclib.Fault as e:
+					LOGGER.error("Unable to change base-channel for system '{0}' - '{1} - {2}'".format(system, e.faultCode, e.faultString))
+				except:	LOGGER.error("Unable to change base-channel for system '{0}' - '{1}'".format(system, str(sys.exc_info()[0])))
 			
 			#remap child-channels
 			childChannels = client.system.listSubscribedChildChannels(key, hostId[0]["id"])
@@ -169,20 +180,22 @@ def remapSystems(client, key, unfreeze=False):
 			for channel in childChannels:
 				myNewChannel = channel["label"]
 				if options.unfreeze:
-					myNewChannel = myNewChannel[:myNewChannel.find("-satprep")]
+					#switch back to non-cloned
+					myNewChannel = myNewChannel[:myNewChannel.find(".sp")]
 				else:
-					myNewChannel = channel["label"]+"-"+options.targetLabel+"-"+options.targetDate
+					#switch to cloned
+					myNewChannel = channel["label"]+"."+options.targetLabel+"-"+options.targetDate
 				tmpChannels.append(myNewChannel)
 			if options.dryrun: LOGGER.info("I'd like to set the following child-channels for {0}: {1}".format(system, str(tmpChannels)))
 			else:
 				try:
-					LOGGER.debug("Setting child-channels for {0}: {1}".format(system, str(childChannels)))
+					LOGGER.debug("Setting child-channels for {0}: {1}".format(system, str(tmpChannels)))
 					result = client.system.setChildChannels(key, hostId[0]["id"], tmpChannels)
-				except xmlrpclib.Fault:
+				except xmlrpclib.Fault as e:
 					#ignore retarded xmlrpclib.Fault as it works like a charm
 					pass
 				except:
-					LOGGER.error("Unable to set child-channels for {0}: {1}".format(system, sys.exc_info()[0]))
+					LOGGER.error("Unable to set child-channels ({0}) for '{1}' - '{2}'".format(str(tmpChannels), system, sys.exc_info()[0]))
 			del tmpChannels
 
 
@@ -199,7 +212,7 @@ def main(options):
 		LOGGER.debug("Flicked date to: " + now.strftime("%Y-%m-%d"))
 	#split label, systems and groups
 	options.targetLabel = ''.join(options.targetLabel.split()).strip("-").lower()
-	if not "satprep" in options.targetLabel: options.targetLabel = "satprep-"+options.targetLabel
+	if not "sp" in options.targetLabel: options.targetLabel = "sp-"+options.targetLabel
 	if len(options.targetSystems) == 1: options.targetSystems = str(options.targetSystems).strip("[]'").split(",")
 	if len(options.targetGroups) == 1: options.targetGroups = str(options.targetGroups).strip("[]'").split(",")
 	if len(options.exclude) == 1: options.exclude = str(options.exclude).strip("[]'").split(",")
@@ -229,7 +242,7 @@ def parse_options(args=None):
         if args is None:
                 args = sys.argv
 
-        # define description, version and load parser
+        #define description, version and load parser
         desc = '''%prog is used to clone software channels managed with Spacewalk, Red Hat Satellite 5.x and SUSE Manager to freeze system updates. It automatically clones appropriate software channels for particular systems or system groups and also remaps software channels to affected hosts. Login credentials are assigned using the following shell variables:
 
         SATELLITE_LOGIN  username
@@ -278,7 +291,7 @@ If you're not defining variables or an authfile you will be prompted to enter yo
 	#-A / --all-subchannels
 	chnOpts.add_option("-A", "--all-subchannels", action="store_true", dest="allSubchannels", default=False, help="clones all sub-channels instead of only required ones (default: no)")
 	#-l / --label
-	chnOpts.add_option("-l", "--label", action="store", dest="targetLabel", metavar="LABEL", default="satprep", help="defines a label for the cloned channel (e.g. application name)")
+	chnOpts.add_option("-l", "--label", action="store", dest="targetLabel", metavar="LABEL", default="sp", help="defines a label for the cloned channel (e.g. application name)")
 	#-D / --date
 	chnOpts.add_option("-D", "--date", action="store", dest="targetDate", metavar="DATE", default="wingardiumleviosa", help="defines the date patches should be freezed (default: current date)")
 	
