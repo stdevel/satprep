@@ -61,7 +61,7 @@ def getChannels(client, key):
 			LOGGER.debug("This system's profile ID: {0}".format(hostId))
 			baseChannel = client.system.getSubscribedBaseChannel(key, hostId[0]["id"])
 			cleanBase = baseChannel["label"]
-			if ".sp" in cleanBase: cleanBase = cleanBase[:cleanBase.find(".sp")]
+			if "." in cleanBase: cleanBase = cleanBase[cleanBase.find(".")+1:]
 			if cleanBase not in myChannels:
 				#channel non-present
 				LOGGER.debug("Adding channel '{0}'".format(cleanBase))
@@ -70,7 +70,7 @@ def getChannels(client, key):
 			childChannels = client.system.listSubscribedChildChannels(key, hostId[0]["id"])
 			for channel in childChannels:
 				cleanChild = channel["label"]
-				if ".sp" in cleanChild: cleanChild = cleanChild[:cleanChild.find(".sp")]
+				if "." in cleanChild: cleanChild = cleanChild[:cleanChild.find(".")+1:]
 				if cleanChild not in myChannels[cleanBase]:
 					LOGGER.debug("Adding child-channel '{0}'".format(cleanChild))
 					myChannels[cleanBase].append(cleanChild)
@@ -94,34 +94,34 @@ def cloneChannels(client, key, date, label, unfreeze=False):
 		for channel in myChannels:
 			#remove child-channels
 			for child in myChannels[channel]:
-				if options.dryrun: LOGGER.info("I'd like to remove cloned child-channel '{0}'".format(child+"."+options.targetLabel+"-"+options.targetDate))
+				if options.dryrun: LOGGER.info("I'd like to remove cloned child-channel '{0}'".format(options.targetLabel+"-"+options.targetDate+"."+child))
 				else:
 					try:
-						LOGGER.info("Deleting child-channel '{0}'".format(child+"-"+options.targetLabel+"-"+options.targetDate))
-						result = client.channel.software.delete(key, child+"."+options.targetLabel+"-"+options.targetDate)
+						LOGGER.info("Deleting child-channel '{0}'".format(options.targetLabel+"-"+options.targetDate+"."+child))
+						result = client.channel.software.delete(key, options.targetLabel+"-"+options.targetDate+"."+child)
 					except xmlrpclib.Fault as e:
-						LOGGER.error("Unable to remove child-channel '{0}': '{1}'".format(child+"-"+options.targetLabel+"-"+options.targetDate, e.faultString))
+						LOGGER.error("Unable to remove child-channel '{0}': '{1}'".format(options.targetLabel+"-"+options.targetDate+"."+child, e.faultString))
 					except xmlrpclib.ProtocolError as e:
-						LOGGER.error("Unable to remove child-channel '{0}': '{1}'".format(child+"-"+options.targetLabel+"-"+options.targetDate, e.errmsg))
+						LOGGER.error("Unable to remove child-channel '{0}': '{1}'".format(options.targetLabel+"-"+options.targetDate+"."+child, e.errmsg))
 					except:
-						LOGGER.error("Unable to remove child-channel '{0}'!".format(child+"-"+options.targetLabel+"-"+options.targetDate))
+						LOGGER.error("Unable to remove child-channel '{0}'!".format(options.targetLabel+"-"+options.targetDate+"."+child))
 		#remove base-channel
 		if options.dryrun: LOGGER.info("I'd like to remove cloned base-channel '{0}'".format(channel+"."+options.targetLabel+"-"+options.targetDate))
 		else:
 			try:
 				LOGGER.info("Deleting base-channel '{0}'".format(channel+"."+options.targetLabel+"-"+options.targetDate))
-				result = client.channel.software.delete(key, channel+"."+options.targetLabel+"-"+options.targetDate)
+				result = client.channel.software.delete(key, options.targetLabel+"-"+options.targetDate+"."+channel)
 			except: LOGGER.error("Unable to remove base-channel '{0}'!".format(channel))
 		return True
 	
 	#clone channels
 	for channel in myChannels:
 		#clone base-channels
-		myargs={"name" : channel+" clone from "+options.targetDate, "label" : channel+"."+options.targetLabel+"-"+options.targetDate, "summary" : "Software channel cloned by Satprep"}
+		myargs={"name" : channel+" clone from "+options.targetDate+" ("+options.targetLabel+")", "label" : options.targetLabel+"-"+options.targetDate+"."+channel, "summary" : "Software channel cloned by Satprep"}
 		if options.dryrun:
-			LOGGER.info("I'd like to clone base-channel '{0}' as '{1}'".format(channel, channel+"."+options.targetLabel+"-"+options.targetDate))
+			LOGGER.info("I'd like to clone base-channel '{0}' as '{1}'".format(channel, options.targetLabel+"-"+options.targetDate+"."+channel))
 		else:
-			LOGGER.info("Cloning base-channel '{0}' as '{1}'".format(channel, channel+"."+options.targetLabel+"-"+options.targetDate))
+			LOGGER.info("Cloning base-channel '{0}' as '{1}'".format(channel, options.targetLabel+"-"+options.targetDate+"."+channel))
 			try:
 				result = client.channel.software.clone(key, channel, myargs, False)
 				if result != 0: LOGGER.debug("Cloned base-channel")
@@ -134,11 +134,11 @@ def cloneChannels(client, key, date, label, unfreeze=False):
 		
 		#clone child-channels
 		for child in myChannels[channel]:
-			myargs={"name" : child+" clone from "+options.targetDate, "label" : child+"."+options.targetLabel+"-"+options.targetDate, "summary" : "Software channel cloned by Satprep", "parent_label": channel+"."+options.targetLabel+"-"+options.targetDate}
+			myargs={"name" : child+" clone from "+options.targetDate, "label" : options.targetLabel+"-"+options.targetDate+"."+child, "summary" : "Software channel cloned by Satprep", "parent_label": options.targetLabel+"-"+options.targetDate+"."+channel}
 			if options.dryrun:
-				LOGGER.info("I'd like to clone child-channel '{0}' as '{1}'".format(child, child+"."+options.targetLabel+"-"+options.targetDate))
+				LOGGER.info("I'd like to clone child-channel '{0}' as '{1}'".format(child, options.targetLabel+"-"+options.targetDate+"."+child))
 			else:
-				LOGGER.info("Cloning child-channel '{0}' as '{1}'".format(child, child+"."+options.targetLabel+"-"+options.targetDate))
+				LOGGER.info("Cloning child-channel '{0}' as '{1}'".format(child, options.targetLabel+"-"+options.targetDate+"."+child))
 				try:
 					result = client.channel.software.clone(key, child, myargs, False)
 					if result != 0: LOGGER.debug("Cloned child-channel")
@@ -161,8 +161,8 @@ def remapSystems(client, key, unfreeze=False):
 			myBase = client.system.getSubscribedBaseChannel(key, hostId[0]["id"])
 			if options.unfreeze:
 				myNewBase = myBase["label"]
-				myNewBase = myNewBase[:myNewBase.find(".sp")]
-			else: myNewBase = myBase["label"]+"."+options.targetLabel+"-"+options.targetDate
+				myNewBase = myNewBase[myNewBase.find(".")+1:]
+			else: myNewBase = options.targetLabel+"-"+options.targetDate+"."+myBase["label"]
 			
 			if options.dryrun: LOGGER.info("I'd like to remap {0}'s base-channel from {1} to {2}".format(system, myBase["label"], myNewBase))
 			else:
@@ -181,10 +181,10 @@ def remapSystems(client, key, unfreeze=False):
 				myNewChannel = channel["label"]
 				if options.unfreeze:
 					#switch back to non-cloned
-					myNewChannel = myNewChannel[:myNewChannel.find(".sp")]
+					myNewChannel = myNewChannel[myNewChannel.find(".")+1:]
 				else:
 					#switch to cloned
-					myNewChannel = channel["label"]+"."+options.targetLabel+"-"+options.targetDate
+					myNewChannel = options.targetLabel+"-"+options.targetDate+"."+channel["label"]
 				tmpChannels.append(myNewChannel)
 			if options.dryrun: LOGGER.info("I'd like to set the following child-channels for {0}: {1}".format(system, str(tmpChannels)))
 			else:
@@ -252,7 +252,7 @@ def parse_options(args=None):
 If you're not defining variables or an authfile you will be prompted to enter your login information.
 
         Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(description=desc, version="%prog version 0.3.4")
+        parser = OptionParser(description=desc, version="%prog version 0.3.5")
 	#define option groups
 	genOpts = OptionGroup(parser, "Generic Options")
 	srvOpts = OptionGroup(parser, "Server Options")

@@ -23,7 +23,6 @@ import datetime
 
 #define logger
 LOGGER = logging.getLogger('satprep_diff')
-vlogInvalid=False
 
 #TODO: delete original snapshots after creating delta option
 #TODO: use pre-existing delta CSV instead of creating one (e.g. for testing purposes)
@@ -42,7 +41,7 @@ def parse_options(args=None):
         desc='''%prog is used to create patch diff reports of systems managed with Spacewalk, Red Hat Satellite and SUSE Manager. The script needs TeXlive/LaTeX to create PDF reports. Defining your own templates is possible - the default template needs to be located in the same directory like this script.
 		
 		Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.4")
+        parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.5")
         #define option groups
         genOpts = OptionGroup(parser, "Generic Options")
         repOpts = OptionGroup(parser, "Report Options")
@@ -86,8 +85,6 @@ def parse_options(args=None):
 
 
 def main(options):
-	global vlogInvalid
-	
 	#define folder of this script
 	thisFolder = os.path.dirname(os.path.realpath(__file__))
 	
@@ -161,14 +158,7 @@ def main(options):
 				this_date = datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y-%m-%d')
 				#set vlog
 				if options.verificationLog == "":
-					if os.access(datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y%m%d')+"_satprep.vlog", os.W_OK):
-						options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y%m%d')+"_satprep.vlog"
-				elif os.access(options.verificationLog, os.W_OK) != True:
-					if os.access(datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y%m%d')+"_satprep.vlog", os.W_OK):
-						options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y%m%d')+"_satprep.vlog"
-					else: options.verificationLog = ""
-				if options.verificationLog != "": LOGGER.info(options.verificationLog + " seems to be our verification log")
-				else: LOGGER.info("Snapshot and monitoring checkboxes won't be pre-selected as we don't have a valid .vlog!")
+					options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y%m%d')+"_satprep.vlog"
 			else:
 				#file2 is bigger
 				LOGGER.info("Assuming file2 ('"+args[1]+"') is the first snapshot.")
@@ -180,23 +170,15 @@ def main(options):
 				this_date = datetime.datetime.fromtimestamp(os.path.getmtime(args[0])).strftime('%Y-%m-%d')
 				#set vlog
 				if options.verificationLog == "":
-					if os.access(datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog", os.W_OK):
-						options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog"
-				elif os.access(options.verificationLog, os.W_OK) != True:
-					if os.access(datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog", os.W_OK):
-						options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog"
-					else: options.verificationLog = ""
-				if options.verificationLog != "": LOGGER.info(options.verificationLog + " seems to be our verification log")
-				else:
-					LOGGER.info("Snapshot and monitoring checkboxes won't be pre-selected as we don't have a valid .vlog!")
-					vlogInvalid=True
+					options.verificationLog = datetime.datetime.fromtimestamp(os.path.getmtime(args[1])).strftime('%Y%m%d')+"_satprep.vlog"
 			
 			#read vlog
-			if vlogInvalid == False:
+			if os.path.exists(options.verificationLog):
 				f_log = open(options.verificationLog, 'r')
-				vlog = f_log.read()
-				LOGGER.debug("vlog is:\n" + vlog)
-			else: vlog=""
+			else:
+				f_log = open(options.verificationLog, 'w+')
+			vlog = f_log.read()
+			LOGGER.debug("vlog is:\n" + vlog)
 			
 			#create delta
 			delta = ''.join(x[2:] for x in diff if x.startswith('- '))
@@ -249,9 +231,11 @@ def main(options):
 			for host in hosts:
 				#scan imported data
 				
-				#flag for NoReboot Box and notes
+				#pre-setting some variables
 				this_NoReboot="$\Box$"
 				this_RebootNotes=""
+				this_monYes="$\Box$"
+				this_monNo="$\Box$"
 				
 				#LaTeX line including the the errata-relevant columns for this host
 				thisColDescriptor=""
@@ -338,14 +322,13 @@ def main(options):
 									if "@" in tempHost: tempHost = tempHost[:tempHost.find("@")]
 								else: tempHost = host
 								if "MONOK;"+host in vlog:
-									LOGGER.debug("MONOK;"+tempHost + " in vlog!")
+									LOGGER.debug("MONOK;"+tempHost+" in vlog!")
 									this_monYes = "$\CheckedBox$"
 									this_monNo = "$\Box$"
 								else:
-									LOGGER.debug("MONOK;"+tempHost + " NOT in vlog!")
+									LOGGER.debug("MONOK;"+tempHost+" NOT in vlog!")
 									this_monYes = "$\Box$"
-									if vlogInvalid == False: this_monNo = "$\CheckedBox$"
-									else: this_monNo = "$\Box$"
+									this_monNo = "$\CheckedBox$"
 							if repcols["system_monitoring_notes"] < 666 and len(line[repcols["system_monitoring_notes"]]) > 1:
                                                                	this_monNotes = line[repcols["system_monitoring_notes"]]
 							else: this_monNotes = ""
@@ -392,18 +375,13 @@ def main(options):
 								else:
 									LOGGER.debug("SNAPOK;"+tempHost + " NOT in vlog!")
 									this_vmSnapYes = "$\Box$"
-									if vlogInvalid == False: this_vmSnapNo = "$\CheckedBox$"
+									this_vmSnapNo = "$\CheckedBox$"
                                                         else:  
 								#set boxes and notes
 								this_hwCheckNo = "$\Box$"
 								this_vmSnapNo = "$\CheckedBox$"
 								this_hwCheckNotes = ""
 								this_vmSnapNotes ="not a virtual machine"
-							
-							#set reboot box if specified and present in report
-							if repcols["errata_reboot"] < 666 and line[repcols["errata_reboot"]] != "reboot_suggested":
-								this_NoReboot="$\CheckedBox$"
-								this_RebootNotes="no reboot required"
 							
 							#set errata information
 							if repcols["errata_name"] < 666 and line[repcols['errata_name']] != "":
@@ -416,6 +394,13 @@ def main(options):
 								this_errata_type.append(line[repcols["errata_type"]])
 							if repcols["errata_reboot"] < 666 and line[repcols["errata_reboot"]] != "":
 								this_errata_reboot.append(line[repcols["errata_reboot"]])
+							
+				#set reboot box if specified and present in report
+				rebootErrata = [s for e in this_errata_reboot if e == "1"]
+				print len(rebootErrata)
+				if len(rebootErrata) == 0:
+					this_NoReboot="$\CheckedBox$"
+					this_RebootNotes="no reboot required"
 				
                                 #add errata
 				tempRow=""

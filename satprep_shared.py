@@ -12,6 +12,7 @@ import time
 from datetime import datetime, timedelta
 import libvirt
 from fnmatch import fnmatch
+import string
 
 
 
@@ -20,7 +21,7 @@ LIBVIRT_USERNAME=""
 LIBVIRT_PASSWORD=""
 
 LOGGER =  logging.getLogger('satprep-shared')
-SUPPORTED_API_LEVELS = ["11.1", "12", "13", "13.0", "14", "14.0", "15", "15.0", "16", "16.0"]
+SUPPORTED_API_LEVELS = ["11.1", "12", "13", "13.0", "14", "14.0", "15", "15.0", "16", "16.0", "17", "17.0"]
 
 
 
@@ -301,3 +302,9 @@ def get_systems_by_systemgroup(client, key, group):
 #get systems by system group
 	systems = client.systemgroup.listSystems(key, group)
 	LOGGER.debug(systems)
+
+
+
+def escape_string(str):
+        temp=filter(string.printable.__contains__,str)
+        return ''.join([c for c in temp if ord(c) > 31 or ord(c) == 9])

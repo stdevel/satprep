@@ -17,7 +17,7 @@ import sys
 import time
 import xmlrpclib
 from optparse import OptionParser, OptionGroup
-from satprep_shared import check_if_api_is_supported, get_credentials
+from satprep_shared import check_if_api_is_supported, get_credentials, escape_string
 from unidecode import unidecode
 
 
@@ -47,7 +47,7 @@ It is also possible to create an authfile (permissions 0600) for usage with this
 If you're not defining variables or an authfile you will be prompted to enter your login information.
 
 Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-	parser = OptionParser(description=desc, version="%prog version 0.3.4")
+	parser = OptionParser(description=desc, version="%prog version 0.3.5")
 	#define option groups
 	genOpts = OptionGroup(parser, "Generic Options")
 	parser.add_option_group(genOpts)
@@ -349,6 +349,8 @@ def process_errata(client, key, writer, system):
 					ascii=unidecode(field)
 				))
 				valueSet[i] = str(unidecode(field))
+			#remove crap
+			valueSet[i] = escape_string(str(valueSet[i]))
 		
 		writer.writerow(valueSet)
 
@@ -517,8 +519,17 @@ def process_patches(client, key, writer, system):
 				else:
 					valueSet.append("")
 
-		if valueSet:
-			writer.writerow(valueSet)
+		#replace unicodes
+		for i,field in enumerate(valueSet):
+			if type(field) is unicode:
+				LOGGER.debug("Converted to ascii: {ascii}".format(
+					ascii=unidecode(field)
+				))
+				valueSet[i] = str(unidecode(field))
+			#remove crap
+			valueSet[i] = escape_string(str(valueSet[i]))
+		
+		writer.writerow(valueSet)
 
 
 

@@ -48,8 +48,10 @@ def verify():
         #check whether the output directory/file is writable
         if os.access(os.getcwd(), os.W_OK):
 		LOGGER.debug("Output file/directory writable!")
-		myLog = open(myPrefix+"_satprep.vlog", "r+")
-		#myFile = myLog.readlines()
+		if os.path.exists(myPrefix+"_satprep.vlog"):
+			myLog = open(myPrefix+"_satprep.vlog", "r+")
+		else:
+			myLog = open(myPrefix+"_satprep.vlog", "w+")
 		myFile = myLog.read().splitlines()
 		LOGGER.debug("vlog before customization: ***\n" + str(myFile))
 	else:
@@ -326,16 +328,17 @@ def readFile(file):
 					LOGGER.debug("Script parameters are avoiding creating snapshot for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 			else:
 				#add host to downtimeHosts if reboot required and monitoring flag set, add custom names if defined
-				if row[repcols["system_monitoring"]] == "1" and row[repcols["errata_reboot"]] == "1":
+				if repcols["errata_reboot"] < 666 and row[repcols["errata_reboot"]] == "1":
 					#handle custom name
 					if row[repcols["system_monitoring"]] == "1" and row[repcols["system_monitoring_name"]] != "":
 						this_name = row[repcols["system_monitoring_name"]]
-					else: this_name = row[repcols["hostname"]]
+					elif row[repcols["system_monitoring"]] == "1":
+						this_name = row[repcols["hostname"]]
 					#only add if prod/nonprod modes aren't avoiding it
 					if (row[repcols["system_prod"]] == "1" and options.nonprodOnly == False) \
 					or (row[repcols["system_prod"]] != "1" and options.prodOnly == False) \
 					or (options.prodOnly == False and options.nonprodOnly == False):
-						if is_blacklisted(row[repcols["hostname"]], options.exclude) == False: downtimeHosts.append(this_name)
+						if is_blacklisted(row[repcols["hostname"]], options.exclude) == False and row[repcols["system_monitoring"]] == "1": downtimeHosts.append(this_name)
 						LOGGER.debug("Downtime will be scheduled for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 					else: LOGGER.debug("Script parameters are avoiding scheduling downtime for '" + this_name + "' (P:" + row[repcols["system_prod"]] + ")")
 				
@@ -404,7 +407,7 @@ def parse_options(args=None):
 	
 	Check-out the GitHub documentation (https://github.com/stdevel/satprep) for further information.
 	'''
-	parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.4")
+	parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.5")
 	#define option groups
 	genOpts = OptionGroup(parser, "Generic Options")
 	monOpts = OptionGroup(parser, "Monitoring Options")
