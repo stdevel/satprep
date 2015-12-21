@@ -177,8 +177,9 @@ def main(options):
 				f_log = open(options.verificationLog, 'r')
 			else:
 				f_log = open(options.verificationLog, 'w+')
-			vlog = f_log.read()
-			LOGGER.debug("vlog is:\n" + vlog)
+			vlog = f_log.readlines()
+			vlog = [x.strip('\n') for x in vlog]
+			LOGGER.debug("vlog is:\n" + str(vlog))
 			
 			#create delta
 			delta = ''.join(x[2:] for x in diff if x.startswith('- '))
@@ -314,6 +315,8 @@ def main(options):
 							#set system monitoring bit if specified and present in report
 							if repcols["system_monitoring"] < 666 and line[repcols["system_monitoring"]] == "0":
 								#no monitoring, add notes if available
+								this_monYes = "$\Box$"
+								this_monNo = "$\CheckedBox$"
                                                                 this_monSchedNo = "$\CheckedBox$"
 							else:
 								#set box/comment if downtime scheduled
@@ -321,7 +324,7 @@ def main(options):
 									tempHost = line[repcols["system_monitoring_name"]]
 									if "@" in tempHost: tempHost = tempHost[:tempHost.find("@")]
 								else: tempHost = host
-								if "MONOK;"+host in vlog:
+								if str("MONOK;"+tempHost) in vlog:
 									LOGGER.debug("MONOK;"+tempHost+" in vlog!")
 									this_monYes = "$\CheckedBox$"
 									this_monNo = "$\Box$"
@@ -397,7 +400,6 @@ def main(options):
 							
 				#set reboot box if specified and present in report
 				rebootErrata = [s for e in this_errata_reboot if e == "1"]
-				print len(rebootErrata)
 				if len(rebootErrata) == 0:
 					this_NoReboot="$\CheckedBox$"
 					this_RebootNotes="no reboot required"

@@ -75,8 +75,8 @@ Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
 	snapOpts.add_option("-o", "--output", action="store", type="string", dest="output", default="foobar", metavar="FILE", help=("define CSV report filename. (default: " "errata-snapshot-report-RHNhostname-Ymd.csv)"))
 	#-f / --field
 	#snapOpts.add_option("-f", "--field", action="append", type="choice", dest="fields", choices=POSSIBLE_FIELDS, metavar="FIELDS", help="defines which fields should be integrated in the report (default: all available)")
-	#-p / --include-patches
-	snapOpts.add_option("-p", "--include-patches", action="store_true", default=False, dest="includePatches", help="defines whether package updates that are not part of an erratum shall be included (default: no)")
+	#-p / --exclude-patches
+	snapOpts.add_option("-p", "--exclude-patches", action="store_true", default=False, dest="excludePatches", help="defines whether package updates that are not part of an erratum shall be excluded (default: no)")
 	#-l / --include-locked
 	snapOpts.add_option("-l", "--include-locked", action="store_true", default=False, dest="includeLocked", help="also includes locked systems (default: no)")
 
@@ -145,7 +145,7 @@ def process_system(client, key, writer, system):
 	LOGGER.debug("Found host {0[name]} (SID {0[id]})".format(system))
 	process_errata(client, key, writer, system)
 
-	if options.includePatches:
+	if options.excludePatches == False:
 		process_patches(client, key, writer, system)
 
 

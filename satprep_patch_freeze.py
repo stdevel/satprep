@@ -70,7 +70,8 @@ def getChannels(client, key):
 			childChannels = client.system.listSubscribedChildChannels(key, hostId[0]["id"])
 			for channel in childChannels:
 				cleanChild = channel["label"]
-				if "." in cleanChild: cleanChild = cleanChild[:cleanChild.find(".")+1:]
+				#if "." in cleanChild: cleanChild = cleanChild[:cleanChild.find(".")+1:]
+				if "." in cleanChild: cleanChild = cleanChild[cleanChild.find(".")+1:]
 				if cleanChild not in myChannels[cleanBase]:
 					LOGGER.debug("Adding child-channel '{0}'".format(cleanChild))
 					myChannels[cleanBase].append(cleanChild)
@@ -106,10 +107,11 @@ def cloneChannels(client, key, date, label, unfreeze=False):
 					except:
 						LOGGER.error("Unable to remove child-channel '{0}'!".format(options.targetLabel+"-"+options.targetDate+"."+child))
 		#remove base-channel
-		if options.dryrun: LOGGER.info("I'd like to remove cloned base-channel '{0}'".format(channel+"."+options.targetLabel+"-"+options.targetDate))
+		#if options.dryrun: LOGGER.info("I'd like to remove cloned base-channel '{0}'".format(channel+"."+options.targetLabel+"-"+options.targetDate))
+		if options.dryrun: LOGGER.info("I'd like to remove cloned base-channel '{0}'".format(options.targetLabel+"-"+options.targetDate+"."+channel))
 		else:
 			try:
-				LOGGER.info("Deleting base-channel '{0}'".format(channel+"."+options.targetLabel+"-"+options.targetDate))
+				LOGGER.info("Deleting base-channel '{0}'".format(options.targetLabel+"-"+options.targetDate+"."+channel))
 				result = client.channel.software.delete(key, options.targetLabel+"-"+options.targetDate+"."+channel)
 			except: LOGGER.error("Unable to remove base-channel '{0}'!".format(channel))
 		return True
@@ -117,7 +119,7 @@ def cloneChannels(client, key, date, label, unfreeze=False):
 	#clone channels
 	for channel in myChannels:
 		#clone base-channels
-		myargs={"name" : channel+" clone from "+options.targetDate+" ("+options.targetLabel+")", "label" : options.targetLabel+"-"+options.targetDate+"."+channel, "summary" : "Software channel cloned by Satprep"}
+		myargs={"name" : "Cloned " + channel + " from "+options.targetDate+" ("+options.targetLabel+")", "label" : options.targetLabel+"-"+options.targetDate+"."+channel, "summary" : "Software channel cloned by Satprep"}
 		if options.dryrun:
 			LOGGER.info("I'd like to clone base-channel '{0}' as '{1}'".format(channel, options.targetLabel+"-"+options.targetDate+"."+channel))
 		else:
@@ -134,7 +136,7 @@ def cloneChannels(client, key, date, label, unfreeze=False):
 		
 		#clone child-channels
 		for child in myChannels[channel]:
-			myargs={"name" : child+" clone from "+options.targetDate, "label" : options.targetLabel+"-"+options.targetDate+"."+child, "summary" : "Software channel cloned by Satprep", "parent_label": options.targetLabel+"-"+options.targetDate+"."+channel}
+			myargs={"name" : "Cloned " + child + " from "+options.targetDate, "label" : options.targetLabel+"-"+options.targetDate+"."+child, "summary" : "Software channel cloned by Satprep", "parent_label": options.targetLabel+"-"+options.targetDate+"."+channel}
 			if options.dryrun:
 				LOGGER.info("I'd like to clone child-channel '{0}' as '{1}'".format(child, options.targetLabel+"-"+options.targetDate+"."+child))
 			else:
