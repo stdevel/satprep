@@ -29,6 +29,9 @@ myChannels={}
 def getChannels(client, key):
 	#get _all_ the hosts
 	satGroups=[]
+	global myChannels
+	global mySystems
+	
 	for item in client.systemgroup.listAllGroups(key):
 		satGroups.append(item["name"])
 	LOGGER.debug("This Satellite server's groups: '{0}'".format(satGroups))
@@ -43,12 +46,20 @@ def getChannels(client, key):
 				tempHosts.append(host["profile_name"])
 				LOGGER.debug("Adding system '{0}'".format(host["profile_name"]))
 		else: LOGGER.error("Group '{0}' appears not to be a valid group".format(group))
-	#removing blacklisted
+	#removing blacklisted or hosts without base channel
 	for host in tempHosts:
+		hostId = client.system.getId(key, host)
 		if is_blacklisted(host, options.exclude):
 			LOGGER.debug("System '{0}' is blacklisted".format(host))
-		else:	mySystems.append(host)
-	#listing hosts
+		elif len(client.system.getSubscribedBaseChannel(key, hostId[0]["id"])) < 1:
+			LOGGER.error("System '{0}' has no base channel".format(host))
+		else:
+			LOGGER.debug("Adding valid system '{0}'".format(host))	
+			mySystems.append(host)
+	#list hosts or die in a fire
+	if len(mySystems) == 0:
+		LOGGER.info("Nothing to do, giving up!")
+		sys.exit(1)
 	LOGGER.debug("Validated hosts:")
 	for host in mySystems: LOGGER.debug(host)
 	
@@ -66,24 +77,23 @@ def getChannels(client, key):
 				#channel non-present
 				LOGGER.debug("Adding channel '{0}'".format(cleanBase))
 				myChannels[cleanBase]=[]
-			#adding child channels
-			childChannels = client.system.listSubscribedChildChannels(key, hostId[0]["id"])
-			for channel in childChannels:
-				cleanChild = channel["label"]
-				#if "." in cleanChild: cleanChild = cleanChild[:cleanChild.find(".")+1:]
-				if "." in cleanChild: cleanChild = cleanChild[cleanChild.find(".")+1:]
-				if cleanChild not in myChannels[cleanBase]:
-					LOGGER.debug("Adding child-channel '{0}'".format(cleanChild))
-					myChannels[cleanBase].append(cleanChild)
-			#also list non-subscribed channels if wanted
-			if options.allSubchannels:
-				childChannels = client.system.listSubscribableChildChannels(key, hostId[0]["id"])
+				#adding child channels
+				childChannels = client.system.listSubscribedChildChannels(key, hostId[0]["id"])
 				for channel in childChannels:
+					cleanChild = channel["label"]
+					if "." in cleanChild: cleanChild = cleanChild[cleanChild.find(".")+1:]
 					if cleanChild not in myChannels[cleanBase]:
-						LOGGER.debug("Adding non-subscribed child-channel '{0}'".format(cleanChild))
+						LOGGER.debug("Adding child-channel '{0}'".format(cleanChild))
 						myChannels[cleanBase].append(cleanChild)
+				#also list non-subscribed channels if wanted
+				if options.allSubchannels:
+					childChannels = client.system.listSubscribableChildChannels(key, hostId[0]["id"])
+					for channel in childChannels:
+						if cleanChild not in myChannels[cleanBase]:
+							LOGGER.debug("Adding non-subscribed child-channel '{0}'".format(cleanChild))
+							myChannels[cleanBase].append(cleanChild)
 		except:
-			LOGGER.error("Unable to scan system '{0}', check hostname and profile name!".format(host))
+			LOGGER.error("Unable to scan system '{0}', check hostname, profile name and whether a base channel was set!".format(host))
 	#print channel information
 	LOGGER.debug("Software channel tree: {0}".format(str(myChannels)))
 
@@ -107,7 +117,6 @@ def cloneChannels(client, key, date, label, unfreeze=False):
 					except:
 						LOGGER.error("Unable to remove child-channel '{0}'!".format(options.targetLabel+"-"+options.targetDate+"."+child))
 		#remove base-channel
-		#if options.dryrun: LOGGER.info("I'd like to remove cloned base-channel '{0}'".format(channel+"."+options.targetLabel+"-"+options.targetDate))
 		if options.dryrun: LOGGER.info("I'd like to remove cloned base-channel '{0}'".format(options.targetLabel+"-"+options.targetDate+"."+channel))
 		else:
 			try:
@@ -254,7 +263,7 @@ def parse_options(args=None):
 If you're not defining variables or an authfile you will be prompted to enter your login information.
 
         Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(description=desc, version="%prog version 0.3.5")
+        parser = OptionParser(description=desc, version="%prog version 0.3.6")
 	#define option groups
 	genOpts = OptionGroup(parser, "Generic Options")
 	srvOpts = OptionGroup(parser, "Server Options")

@@ -41,7 +41,7 @@ def parse_options(args=None):
         desc='''%prog is used to create patch diff reports of systems managed with Spacewalk, Red Hat Satellite and SUSE Manager. The script needs TeXlive/LaTeX to create PDF reports. Defining your own templates is possible - the default template needs to be located in the same directory like this script.
 		
 		Checkout the GitHub page for updates: https://github.com/stdevel/satprep'''
-        parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.5")
+        parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.6")
         #define option groups
         genOpts = OptionGroup(parser, "Generic Options")
         repOpts = OptionGroup(parser, "Report Options")

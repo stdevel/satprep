@@ -407,7 +407,7 @@ def parse_options(args=None):
 	
 	Check-out the GitHub documentation (https://github.com/stdevel/satprep) for further information.
 	'''
-	parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.5")
+	parser = OptionParser(usage=usage, description=desc, version="%prog version 0.3.6")
 	#define option groups
 	genOpts = OptionGroup(parser, "Generic Options")
 	monOpts = OptionGroup(parser, "Monitoring Options")
