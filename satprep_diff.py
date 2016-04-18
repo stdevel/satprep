@@ -382,6 +382,7 @@ def main(options):
                                                         else:  
 								#set boxes and notes
 								this_hwCheckNo = "$\Box$"
+								this_vmSnapYes = "$\Box$"
 								this_vmSnapNo = "$\CheckedBox$"
 								this_hwCheckNotes = ""
 								this_vmSnapNotes ="not a virtual machine"
