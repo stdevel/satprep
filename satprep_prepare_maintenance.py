@@ -280,7 +280,7 @@ def readFile(file):
 	global myPrefix
 	
 	#set timestamp as prefix
-	myPrefix = time.strftime("%Y%m%d", time.gmtime(os.path.getctime(args[1])))
+	myPrefix = time.strftime("%Y%m%d", time.gmtime(os.path.getmtime(args[1])))
 	
 	#read report header and get column index for hostname ,reboot and monitoring flag (if any)
 	rFile = open(args[1], 'r')
