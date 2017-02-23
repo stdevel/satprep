@@ -7,6 +7,8 @@ This can be very useful if you need to document software changes due to IT certi
 
 After doing maintenance tasks this toolkit can create detailed change reports per host. Before starting maintenance  you can also automate scheduling downtime for your systems and creating VM snapshots.
 
+**I'm currently re-developing** this toolkit for [Foreman](http://www.theforeman.org/)/[Katello](http://www.katello.org/) and [Red Hat Satellite 6.x](http://www.redhat.com/products/enterprise-linux/satellite/) - the project is called [**katprep**](https://github.com/stdevel/katprep). So, I'm afraid I won't spent too much time on this toolkit, anymore..
+
 
 
 Supported software
