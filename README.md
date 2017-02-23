@@ -1,7 +1,7 @@
 satprep
 =======
 
-**satprep** is a Python toolkit for automating system maintenance and generating CSV/PDF patch reports for systems managed with [Spacewalk](http://www.spacewalkproject.org/), [Red Hat Satellite](http://www.redhat.com/products/enterprise-linux/satellite/) or [SUSE Manager](http://www.suse.com/products/suse-manager/).
+**satprep** is a Python toolkit for automating system maintenance and generating CSV/PDF patch reports for systems managed with [Spacewalk](http://www.spacewalkproject.org/), [Red Hat Satellite 5.x](http://www.redhat.com/products/enterprise-linux/satellite/) or [SUSE Manager](http://www.suse.com/products/suse-manager/).
  
 This can be very useful if you need to document software changes due to IT certifications like [ISO/IEC 27001:2005](http://en.wikipedia.org/wiki/ISO/IEC_27001:2005) or many other.
 
